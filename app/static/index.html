@@ -154,7 +154,7 @@
       </div>
       <div id="hud">
         <span>pose <b id="hPose">–</b></span><span>nav <b id="hNav">–</b></span><span>battery <b id="hBat">–</b></span>
-        <span>scan <b id="hScan">–</b></span><span>odom <b id="hOdom">–</b></span><span>explored <b id="hArea">–</b></span>
+        <span>scan <b id="hScan">–</b></span><span>odom <b id="hOdom">–</b></span><span>slam <b id="hSlam">–</b></span><span>explored <b id="hArea">–</b></span>
       </div>
     </section>
   </div>
@@ -299,6 +299,7 @@ function renderStatus() {
   const s = state.status, ok = s.scan_hz > 1 && s.odom_hz > 1;
   setLink(ok ? 'ok' : (s.scan_age == null && s.odom_age == null ? 'fail' : 'warn'), ok ? `robot linked · scan ${s.scan_hz} Hz` : (s.scan_age == null ? 'no robot data' : 'robot data stale'));
   $('#hScan').textContent = s.scan_hz + ' Hz'; $('#hOdom').textContent = s.odom_hz + ' Hz';
+  $('#hSlam').textContent = s.slam_hz == null ? '–' : s.slam_hz + ' Hz';
   $('#hBat').textContent = s.battery == null ? '–' : Math.round(s.battery * 100) + ' %' + (s.docked ? ' (docked)' : '');
   $('#hNav').textContent = s.nav + (s.nav_remaining != null ? ` · ${s.nav_remaining} m left` : '');
 }

@@ -113,6 +113,12 @@ class App:
         self.probe_id = 0
         self.session = time.strftime('%Y%m%d_%H%M%S')
         self.alerted = False
+        self.slam_alerted = False
+        self.slam_started = None          # monotonic time of Start; None while stopped or stopping
+        self.slam_explore = False
+        self.nav_active = False           # lifecycle manager said "Managed nodes are active"
+        self.nav_watch = False            # still waiting to see Nav2 come up after Start
+        self.slam_retries = 0
 
     # ---- plumbing ----
     @property
@@ -208,6 +214,39 @@ class App:
                                   'Check the robot link, then Re-run checks.'})
         elif not lost:
             self.alerted = False
+
+        # Scans arrive but Hector processes none: the map stays empty. Say why instead of showing nothing.
+        silent = (self.procs['slam'].running and self.slam_started is not None
+                  and time.monotonic() - self.slam_started > 20
+                  and st.get('scan_hz', 0) > 1 and st.get('slam_hz', 0) == 0)
+        if silent and not self.slam_alerted:
+            self.slam_alerted = True
+            await self.broadcast({'type': 'alert', 'text': 'Hector receives /scan but processes no scans, so the map stays '
+                                  'empty. Open the "slam" log: "lookupTransform ... timed out" means the lidar frame is '
+                                  'missing from TF (robot_state_publisher on the robot); a "process has died" line means '
+                                  'Hector crashed. Record a rosbag and keep the logs.'})
+        elif not silent:
+            self.slam_alerted = False
+
+        # Jazzy + Fast DDS sometimes loses a lifecycle service reply at startup ("failed to send
+        # response to /controller_server/change_state (timeout)") and Nav2 never activates.
+        # Nothing crashes, goals are just rejected. A restart clears it.
+        if (self.nav_watch and not self.nav_active and self.procs['slam'].running
+                and self.slam_started is not None and time.monotonic() - self.slam_started > 60):
+            self.nav_watch = False
+            if self.slam_retries < 2:
+                self.slam_retries += 1
+                await self.broadcast({'type': 'alert', 'text': 'Nav2 did not come up within 60 s (a DDS startup '
+                                      f'race in Jazzy): restarting SLAM + Nav2 automatically (attempt {self.slam_retries} '
+                                      'of 2). The map starts again.'})
+                asyncio.create_task(self.restart_slam())
+            else:
+                await self.broadcast({'type': 'alert', 'text': 'Nav2 still did not come up after 2 restarts. Press Stop, '
+                                      'check the "slam" log, then Start again.'})
+
+    async def restart_slam(self):
+        await self.stop_slam()
+        await self.start_slam(self.slam_explore, True, retry=True)
 
     async def probe(self):
         self.probe_id += 1
@@ -354,7 +393,7 @@ class App:
         (self.session_dir / 'preflight.json').write_text(json.dumps(self.preflight, indent=2))
 
     # ---- run control ----
-    async def start_slam(self, explore, force):
+    async def start_slam(self, explore, force, retry=False):
         if self.procs['slam'].running:
             return 'already running'
         age = time.time() - self.preflight['ts']
@@ -371,11 +410,31 @@ class App:
                 f"explore:={'true' if explore else 'false'}", f"use_rviz:={'true' if self.windows else 'false'}"]
         if self.ns:
             argv.append('namespace:=' + self.ns)
-        await self.procs['slam'].start(argv)
+        if not retry:
+            self.slam_retries = 0
+        self.slam_explore, self.nav_active, self.nav_watch = explore, False, True
+        self.slam_started = time.monotonic()
+        await self.procs['slam'].start(argv, on_line=self.on_slam_line)
         self.procs['helper'].write({'cmd': 'traj_start', 'path': str(self.session_dir / 'trajectory.csv')})
         return 'started'
 
+    def on_slam_line(self, line):
+        """Failures that otherwise only show up deep in the slam log."""
+        text = None
+        if 'Managed nodes are active' in line:
+            self.nav_active = True
+        elif 'Aborting bringup' in line:
+            text = ('Nav2 failed to start ("Aborting bringup"): goals will be rejected. '
+                    'The lines just before it in the "slam" log name the node and the reason.')
+        elif 'process has died' in line and self.slam_started is not None:
+            node = re.search(r'\[ERROR\] \[([\w.-]+)\]', line)
+            text = f"{node.group(1) if node else 'A node'} crashed. See the \"slam\" log; Stop and Start again."
+        if text:
+            asyncio.create_task(self.broadcast({'type': 'alert', 'text': text}))
+        return False                     # keep the line in the log as well
+
     async def stop_slam(self):
+        self.slam_started = None
         self.procs['helper'].write({'cmd': 'estop'})
         self.procs['helper'].write({'cmd': 'traj_stop'})
         await self.procs['slam'].stop()

@@ -322,6 +322,21 @@ the area.
 base is about 0.34 m in diameter). Do not lower it. Raise it a little (`0.2`)
 if the robot clips furniture.
 
+### 5.5b Dashboard alerts (first hardware test: no map, Nav2 "crashing")
+
+The first test gave no map and a Nav2 that seemed to keep crashing, with no
+logs kept. The dashboard now says what is wrong instead of staying silent:
+
+| Alert | Meaning | What to do |
+| --- | --- | --- |
+| "Hector receives /scan but processes no scans" | scans arrive, Hector publishes no `/slam_out_pose`; the map stays grey | open the "slam" log: `lookupTransform ... timed out` = lidar frame missing from TF; record a rosbag (button) and keep `~/tb4_data` + `~/.ros/log` |
+| "Nav2 did not come up within 60 s" | Jazzy + Fast DDS sometimes loses a lifecycle reply at startup (`failed to send response to /controller_server/change_state (timeout)`); nothing crashes, goals are just rejected | none: the dashboard restarts SLAM + Nav2 itself (up to 2 times) |
+| "Nav2 failed to start (Aborting bringup)" | a Nav2 node refused its parameters | the log lines just before it name the node and reason |
+| "<node> crashed" | a node died while running | Stop, then Start; keep the logs |
+
+The status bar shows `slam` (Hector's processed scans per second) next to
+`scan`: they should be about equal while mapping.
+
 ### 5.6 Clock offset between robot and laptop (why Nav2 did not drive)
 
 Scan and TF stamps come from the robot's clock; Nav2 on the laptop compares
@@ -344,7 +359,7 @@ Settings in `config/nav2.yaml` so that **no clock sync is needed**:
 | --- | --- | --- |
 | `collision_monitor` | `source_timeout: 0.0` | no age check on the scan (it is still used to slow down near obstacles) |
 | `collision_monitor` | `base_shift_correction: False` | no TF lookup at the laptop's "now" |
-| `local_costmap` | `transform_tolerance: 86400.0` | the end-pose conversion falls back to the latest TF; elsewhere this is only a wait timeout used while TF is missing |
+| `local_costmap` | `transform_tolerance: 2000000000.0` | the end-pose conversion falls back to the latest TF; elsewhere this is only a wait timeout used while TF is missing |
 | DWB `FollowPath` | `transform_tolerance: 1.0` | Wi-Fi lag between Hector's map→odom and odom |
 
 Tested in Webots with the robot's stamps shifted 5 s behind the simulation

@@ -109,8 +109,10 @@ local_costmap:
       # computer's clock) into odom; when the robot's clock differs, tf2 has no
       # data at that stamp and Nav2 falls back to the latest transform only if
       # the gap is below this. Elsewhere it is just a wait timeout used while TF
-      # is missing, so a large value lets an unsynced robot drive.
-      transform_tolerance: 86400.0
+      # is missing, so a large value lets an unsynced robot drive. 2e9 s
+      # (~63 years) covers a Pi that booted at 1970; tf2::Duration rejects
+      # anything above 2^31 s ("t_sec is too large") and Nav2 then fails to start.
+      transform_tolerance: 2000000000.0
       rolling_window: true
       width: 3
       height: 3

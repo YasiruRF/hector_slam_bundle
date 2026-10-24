@@ -35,7 +35,7 @@ from rclpy.clock import Clock, ClockType
 from rclpy.duration import Duration
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 from rclpy.time import Time
 from sensor_msgs.msg import BatteryState, LaserScan
 from tf2_ros import Buffer, TransformListener
@@ -94,7 +94,7 @@ class Helper(Node):
         super().__init__('tb4_gui_helper', parameter_overrides=[
             rclpy.parameter.Parameter('use_sim_time', rclpy.Parameter.Type.BOOL, sim_time)])
         self.ns = ns
-        self.rates = {k: Rate() for k in ('scan', 'odom', 'map')}
+        self.rates = {k: Rate() for k in ('scan', 'odom', 'map', 'slam')}
         self.scan_frame = None
         self.scan_msg = None
         self.scan_delay = deque(maxlen=30)   # this computer's clock minus scan stamp: latency + clock offset
@@ -119,7 +119,13 @@ class Helper(Node):
         self.create_subscription(LaserScan, f'{ns}/scan', self.on_scan, qos_profile_sensor_data)
         self.create_subscription(Odometry, f'{ns}/odom', lambda m: self.rates['odom'].tick(),
                                  qos_profile_sensor_data)
-        self.create_subscription(OccupancyGrid, f'{ns}/map', self.on_map, qos_profile_sensor_data)
+        # Reliable + latched like Hector's publisher: a 262 KB map sent best-effort is lost
+        # whole if one UDP fragment drops, which depends on the DDS transport.
+        self.create_subscription(OccupancyGrid, f'{ns}/map', self.on_map,
+                                 QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
+                                            durability=DurabilityPolicy.TRANSIENT_LOCAL))
+        # Hector publishes one pose per processed scan: no poses while scans arrive = scans rejected.
+        self.create_subscription(PoseStamped, f'{ns}/slam_out_pose', lambda m: self.rates['slam'].tick(), 10)
         self.create_subscription(BatteryState, f'{ns}/battery_state', self.on_battery,
                                  qos_profile_sensor_data)
         if DockStatus:
@@ -206,6 +212,7 @@ class Helper(Node):
     def tick_status(self):
         emit({'type': 'status', 'scan_hz': round(self.rates['scan'].hz(), 1),
               'odom_hz': round(self.rates['odom'].hz(), 1), 'map_hz': round(self.rates['map'].hz(), 2),
+              'slam_hz': round(self.rates['slam'].hz(), 1),
               'scan_age': self.rates['scan'].age(), 'odom_age': self.rates['odom'].age(),
               'battery': self.battery, 'docked': self.docked,
               'nav': self.nav_state, 'nav_remaining': self.nav_remaining,
