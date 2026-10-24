@@ -6,7 +6,7 @@
   bag_tools.py strip BAG OUT             copy BAG without the map -> odom TF that the live
                                          Hector published, so the bag can be replayed into a
                                          fresh Hector with other parameters
-  bag_tools.py odom  BAG CSV             /odom pose as CSV (t, x, y, yaw)
+  bag_tools.py odom  BAG CSV             /odom pose as CSV (t from the header stamps, x, y, yaw)
 """
 import math
 import os
@@ -117,7 +117,8 @@ def cmd_odom(bag, csv):
     with open(csv, 'w') as f:
         f.write('t_s,x,y,yaw\n')
         t0 = None
-        for _, m, t in messages(bag, {'/odom'}):
+        for _, m, _ in messages(bag, {'/odom'}):
+            t = m.header.stamp.sec * 1000000000 + m.header.stamp.nanosec  # robot stamp, not bag
             t0 = t if t0 is None else t0
             p = m.pose.pose
             f.write('%.3f,%.4f,%.4f,%.4f\n' % ((t - t0) * 1e-9, p.position.x, p.position.y,

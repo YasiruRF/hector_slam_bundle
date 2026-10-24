@@ -146,6 +146,10 @@ protected:
 
   geometry_msgs::msg::TransformStamped map_to_odom_;
 
+  // odom -> base_link at the previous scan, for use_tf_pose_start_estimate
+  tf2::Transform last_odom_to_base_;
+  bool have_last_odom_ = false;
+
   std::thread* map__publish_thread_;
 
   hectorslam::HectorSlamProcessor* slamProcessor;

@@ -1,0 +1,16 @@
+QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-root'
+[INFO] [1792850293.201925579] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1792850293.202043513] [rviz2]: OpenGl version: 4.5 (GLSL 4.5)
+[INFO] [1792850293.247939716] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1792850293.650518541] [rviz2]: Trying to create a map of size 512 x 512 using 1 swatches
+[INFO] [1792850293.651666586] [rviz2]: Trying to create a map of size 512 x 512 using 1 swatches
+[ERROR] [1792850293.681516210] [rviz2]: rviz/glsl120/indexed_8bit_image.vert
+rviz/glsl120/indexed_8bit_image.frag
+ GLSL link result : 
+active samplers with a different type refer to the same texture image unit
+[ERROR] [1792850294.813239932] [rviz2]: Lookup would require extrapolation into the future.  Requested time 4.259722 but the latest data is at time 4.176000, when looking up transform from frame [rplidar_link] to frame [map]
+[INFO] [1792850295.557067347] [rviz2]: Trying to create a map of size 50 x 50 using 1 swatches
+[INFO] [1792850314.156867345] [rviz]: Message Filter dropping message: frame 'odom' at time 3.984 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1792850314.157042006] [rviz]: Message Filter dropping message: frame 'odom' at time 4.000 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1792850724.456240422] [rviz]: Message Filter dropping message: frame 'rplidar_link' at time 3.152 for reason 'discarding message because the queue is full'
+[INFO] [1792850727.976175901] [rviz]: Message Filter dropping message: frame 'rplidar_link' at time 208.448 for reason 'discarding message because the queue is full'

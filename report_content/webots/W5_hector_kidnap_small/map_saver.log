@@ -1,0 +1,16 @@
+[INFO] [1792851647.718161143] [map_saver]: 
+	map_saver lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1792851647.718361385] [map_saver]: Creating
+[INFO] [1792851647.719496182] [map_saver]: Configuring
+[INFO] [1792851647.724353969] [map_saver]: Saving map from 'map' topic to 'map' file
+[WARN] [1792851647.724399855] [map_saver]: Free threshold unspecified. Setting it to default value: 0.250000
+[WARN] [1792851647.724411983] [map_saver]: Occupied threshold unspecified. Setting it to default value: 0.650000
+[WARN] [1792851647.900469799] [map_io]: Image format unspecified. Setting it to: pgm
+[INFO] [1792851647.900560065] [map_io]: Received a 512 X 512 map @ 0.05 m/pix
+[INFO] [1792851647.979647585] [map_io]: Writing map occupancy data to map.pgm
+[INFO] [1792851647.981035125] [map_io]: Writing map metadata to map.yaml
+[INFO] [1792851647.981133244] [map_io]: Map saved
+[INFO] [1792851647.981144462] [map_saver]: Map saved successfully
+[INFO] [1792851647.981953487] [map_saver]: Destroying

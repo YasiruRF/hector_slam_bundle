@@ -1,0 +1,1 @@
+map_multi_res_levels:=3

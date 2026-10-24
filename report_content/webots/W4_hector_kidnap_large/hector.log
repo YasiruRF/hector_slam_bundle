@@ -1,0 +1,43 @@
+[INFO] [launch]: All log files can be found below /root/.ros/log/2026-10-24-14-05-45-507723-yasiru-Thin-15-B13UC-6108
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [hector_mapping_node-1]: process started with pid [6131]
+[INFO] [hector_trajectory_server-2]: process started with pid [6132]
+[INFO] [rviz2-3]: process started with pid [6133]
+[rviz2-3] QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-root'
+[hector_trajectory_server-2] [INFO] [1792850745.587221771] [hector_trajectory_server]: Waiting for tf transform data between frames map and base_link to become available
+[hector_mapping_node-1] [INFO] [1792850745.588537369] [hector_mapping]: HectorSM p_base_frame_: base_link
+[hector_mapping_node-1] [INFO] [1792850745.588722273] [hector_mapping]: HectorSM p_map_frame_: map
+[hector_mapping_node-1] [INFO] [1792850745.588727159] [hector_mapping]: HectorSM p_odom_frame_: odom
+[hector_mapping_node-1] [INFO] [1792850745.588729535] [hector_mapping]: HectorSM p_scan_topic_: scan
+[hector_mapping_node-1] [INFO] [1792850745.588731372] [hector_mapping]: HectorSM p_use_tf_scan_transformation_: true
+[hector_mapping_node-1] [INFO] [1792850745.588733722] [hector_mapping]: HectorSM p_pub_map_odom_transform_: true
+[hector_mapping_node-1] [INFO] [1792850745.588735681] [hector_mapping]: HectorSM p_scan_subscriber_queue_size_: 5
+[hector_mapping_node-1] [INFO] [1792850745.588737904] [hector_mapping]: HectorSM p_map_pub_period_: 2.000000
+[hector_mapping_node-1] [INFO] [1792850745.588742202] [hector_mapping]: HectorSM p_update_factor_free_: 0.400000
+[hector_mapping_node-1] [INFO] [1792850745.588745206] [hector_mapping]: HectorSM p_update_factor_occupied_: 0.900000
+[hector_mapping_node-1] [INFO] [1792850745.588747345] [hector_mapping]: HectorSM p_map_update_distance_threshold_: 0.400000 
+[hector_mapping_node-1] [INFO] [1792850745.588749702] [hector_mapping]: HectorSM p_map_update_angle_threshold_: 0.060000
+[hector_mapping_node-1] [INFO] [1792850745.588752310] [hector_mapping]: HectorSM p_laser_z_min_value_: -1.000000
+[hector_mapping_node-1] [INFO] [1792850745.588755721] [hector_mapping]: HectorSM p_laser_z_max_value_: 1.000000
+[rviz2-3] [INFO] [1792850745.692216250] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-3] [INFO] [1792850745.692330627] [rviz2]: OpenGl version: 4.5 (GLSL 4.5)
+[rviz2-3] [INFO] [1792850745.719505483] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-3] [INFO] [1792850745.841691003] [rviz2]: Trying to create a map of size 512 x 512 using 1 swatches
+[rviz2-3] [ERROR] [1792850745.871103132] [rviz2]: rviz/glsl120/indexed_8bit_image.vert
+[rviz2-3] rviz/glsl120/indexed_8bit_image.frag
+[rviz2-3]  GLSL link result : 
+[rviz2-3] active samplers with a different type refer to the same texture image unit
+[hector_mapping_node-1] HectorSM map lvl 0: cellLength: 0.05 res x:512 res y: 512
+[hector_mapping_node-1] HectorSM map lvl 1: cellLength: 0.1 res x:256 res y: 256
+[rviz2-3] [ERROR] [1792850758.168881682] [rviz2]: Lookup would require extrapolation into the future.  Requested time 0.227722 but the latest data is at time 0.160000, when looking up transform from frame [rplidar_link] to frame [map]
+[hector_trajectory_server-2] [INFO] [1792850758.590276300] [hector_trajectory_server]: Finished waiting for tf, waited 0.320000 seconds
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[INFO] [rviz2-3]: sending signal 'SIGINT' to process[rviz2-3]
+[INFO] [hector_trajectory_server-2]: sending signal 'SIGINT' to process[hector_trajectory_server-2]
+[INFO] [hector_mapping_node-1]: sending signal 'SIGINT' to process[hector_mapping_node-1]
+[rviz2-3] [INFO] [1792851187.575935899] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[hector_trajectory_server-2] [INFO] [1792851187.576487493] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[hector_mapping_node-1] [INFO] [1792851187.576811167] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [hector_trajectory_server-2]: process has finished cleanly [pid 6132]
+[INFO] [hector_mapping_node-1]: process has finished cleanly [pid 6131]
+[INFO] [rviz2-3]: process has finished cleanly [pid 6133]

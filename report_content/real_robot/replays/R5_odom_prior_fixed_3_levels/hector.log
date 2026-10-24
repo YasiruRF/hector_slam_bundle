@@ -1,0 +1,26 @@
+[INFO] [launch]: All log files can be found below /root/.ros/log/2026-10-24-13-49-54-392487-yasiru-Thin-15-B13UC-4736
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [hector_mapping_node-1]: process started with pid [4756]
+[INFO] [hector_trajectory_server-2]: process started with pid [4757]
+[hector_mapping_node-1] [INFO] [1792849794.593658857] [hector_mapping]: HectorSM p_base_frame_: base_link
+[hector_mapping_node-1] [INFO] [1792849794.593777947] [hector_mapping]: HectorSM p_map_frame_: map
+[hector_mapping_node-1] [INFO] [1792849794.593788794] [hector_mapping]: HectorSM p_odom_frame_: odom
+[hector_mapping_node-1] [INFO] [1792849794.593795363] [hector_mapping]: HectorSM p_scan_topic_: scan
+[hector_mapping_node-1] [INFO] [1792849794.593801166] [hector_mapping]: HectorSM p_use_tf_scan_transformation_: true
+[hector_mapping_node-1] [INFO] [1792849794.593807547] [hector_mapping]: HectorSM p_pub_map_odom_transform_: true
+[hector_mapping_node-1] [INFO] [1792849794.593813375] [hector_mapping]: HectorSM p_scan_subscriber_queue_size_: 5
+[hector_mapping_node-1] [INFO] [1792849794.593819770] [hector_mapping]: HectorSM p_map_pub_period_: 2.000000
+[hector_mapping_node-1] [INFO] [1792849794.593829193] [hector_mapping]: HectorSM p_update_factor_free_: 0.400000
+[hector_mapping_node-1] [INFO] [1792849794.593837215] [hector_mapping]: HectorSM p_update_factor_occupied_: 0.900000
+[hector_mapping_node-1] [INFO] [1792849794.593843877] [hector_mapping]: HectorSM p_map_update_distance_threshold_: 0.400000 
+[hector_mapping_node-1] [INFO] [1792849794.593851238] [hector_mapping]: HectorSM p_map_update_angle_threshold_: 0.060000
+[hector_mapping_node-1] [INFO] [1792849794.593858988] [hector_mapping]: HectorSM p_laser_z_min_value_: -1.000000
+[hector_mapping_node-1] [INFO] [1792849794.593865755] [hector_mapping]: HectorSM p_laser_z_max_value_: 1.000000
+[hector_trajectory_server-2] [INFO] [1792849794.595206142] [hector_trajectory_server]: Waiting for tf transform data between frames map and base_link to become available
+[hector_mapping_node-1] [WARN] [1792849799.305749727] [hector_mapping]: lookupTransform base_link to rplidar_link timed out. Could not transform laser scan into base_frame: "rplidar_link" passed to lookupTransform argument source_frame does not exist. 
+[hector_mapping_node-1] HectorSM map lvl 0: cellLength: 0.05 res x:512 res y: 512
+[hector_mapping_node-1] HectorSM map lvl 1: cellLength: 0.1 res x:256 res y: 256
+[hector_mapping_node-1] HectorSM map lvl 2: cellLength: 0.2 res x:128 res y: 128
+[hector_trajectory_server-2] [INFO] [1792849799.602068773] [hector_trajectory_server]: Finished waiting for tf, waited 1792841267.357732 seconds
+[hector_mapping_node-1] [WARN] [1792849812.388924514] [hector_mapping]: No odom -> base_link at scan time, no odometry prior for this scan: Lookup would require extrapolation into the future.  Requested time 1792841278.815708 but the latest data is at time 1792841278.791149, when looking up transform from frame [base_link] to frame [odom]
+[hector_mapping_node-1] [WARN] [1792849830.397440076] [hector_mapping]: No odom -> base_link at scan time, no odometry prior for this scan: Lookup would require extrapolation into the future.  Requested time 1792841296.872066 but the latest data is at time 1792841296.840132, when looking up transform from frame [base_link] to frame [odom]

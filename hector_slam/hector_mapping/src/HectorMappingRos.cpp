@@ -359,21 +359,35 @@ void HectorMappingRos::scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr
     }
     else if (p_use_tf_pose_start_estimate_)
     {
-      // Initial pose estimate comes from the tf tree
+      // Initial pose estimate = last scan-match pose + the odometry motion since
+      // the previous scan. The ROS 1 code looked up map -> base_link at the scan
+      // stamp, but here map -> odom is our own output, stamped with the previous
+      // scan, so that lookup always needed extrapolation, blocked for its 0.5 s
+      // timeout and fell back to the last pose (and Hector dropped to ~2 Hz).
+      start_estimate = slamProcessor->getLastScanMatchPose();
       try
       {
-        geometry_msgs::msg::TransformStamped stamped_pose = tf_buffer_->lookupTransform(p_map_frame_, p_base_frame_, scan->header.stamp, rclcpp::Duration::from_seconds(0.5));
-
-        tf2::Quaternion q;
-        tf2::fromMsg(stamped_pose.transform.rotation, q);
-        double roll, pitch, yaw;
-        tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
-        start_estimate = Eigen::Vector3f(stamped_pose.transform.translation.x, stamped_pose.transform.translation.y, yaw);
+        geometry_msgs::msg::TransformStamped odom_to_base = tf_buffer_->lookupTransform(p_odom_frame_, p_base_frame_, scan->header.stamp, rclcpp::Duration::from_seconds(0.5));
+        tf2::Transform odom_to_base_tf;
+        tf2::fromMsg(odom_to_base.transform, odom_to_base_tf);
+        if (have_last_odom_)
+        {
+          tf2::Transform delta = last_odom_to_base_.inverse() * odom_to_base_tf;
+          double roll, pitch, dyaw;
+          delta.getBasis().getRPY(roll, pitch, dyaw);
+          const float c = std::cos(start_estimate[2]), s = std::sin(start_estimate[2]);
+          const float dx = delta.getOrigin().x(), dy = delta.getOrigin().y();
+          start_estimate = Eigen::Vector3f(start_estimate[0] + c * dx - s * dy,
+                                           start_estimate[1] + s * dx + c * dy,
+                                           start_estimate[2] + dyaw);
+        }
+        last_odom_to_base_ = odom_to_base_tf;
+        have_last_odom_ = true;
       }
       catch(tf2::TransformException &e)
       {
-        RCLCPP_ERROR(this->get_logger(), "Transform from %s to %s failed: %s", p_map_frame_.c_str(), p_base_frame_.c_str(), e.what());
-        start_estimate = slamProcessor->getLastScanMatchPose();
+        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+          "No %s -> %s at scan time, no odometry prior for this scan: %s", p_odom_frame_.c_str(), p_base_frame_.c_str(), e.what());
       }
     }
     else

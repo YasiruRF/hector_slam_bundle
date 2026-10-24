@@ -1,0 +1,30 @@
+live run: final heading offset -103.8 deg, max |offset| 108.6 deg, Hector path 18.4 m, odometry path 14.2 m
+  slip at t=64.2 s: +4.9 deg
+  slip at t=65.2 s: -4.3 deg
+  slip at t=70.2 s: -3.9 deg
+  slip at t=71.2 s: -13.9 deg
+  slip at t=72.2 s: +5.6 deg
+  slip at t=73.2 s: +18.0 deg
+  slip at t=74.2 s: +3.3 deg
+  slip at t=102.2 s: +4.5 deg
+  slip at t=103.2 s: -5.1 deg
+  slip at t=104.2 s: +3.7 deg
+  slip at t=105.2 s: -3.3 deg
+  slip at t=106.2 s: +5.0 deg
+  slip at t=107.2 s: -4.7 deg
+  slip at t=113.2 s: +3.5 deg
+  slip at t=131.2 s: +3.0 deg
+  slip at t=132.2 s: -3.1 deg
+  slip at t=135.2 s: +4.0 deg
+  slip at t=137.2 s: -3.2 deg
+  slip at t=145.2 s: -4.2 deg
+  slip at t=146.2 s: +4.1 deg
+  slip at t=149.2 s: +6.9 deg
+  slip at t=150.2 s: -8.0 deg
+  slip at t=158.2 s: -34.3 deg
+  slip at t=159.2 s: -70.9 deg
+  slip at t=161.2 s: -4.6 deg
+  slip at t=162.2 s: -7.0 deg
+  slip at t=172.2 s: -4.9 deg
+  slip at t=173.2 s: +4.9 deg
+max turn rate (0.27 s window): 96 deg/s

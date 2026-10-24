@@ -1,0 +1,2 @@
+scan: 1454 msgs, 7.34 Hz
+slam: 1443 msgs, 7.30 Hz

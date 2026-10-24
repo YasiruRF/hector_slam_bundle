@@ -1,0 +1,12 @@
+    3.0 s  goal 1 -> (1.80, -1.30)
+   23.6 s  goal 1 SUCCEEDED in 18.6 s, AMCL error 3.4 cm
+   23.6 s  goal 2 -> (0.00, -6.00)
+   65.7 s  goal 2 SUCCEEDED in 40.1 s, AMCL error 1.9 cm
+   65.7 s  goal 3 -> (4.80, -5.50)
+  219.0 s  goal 3 TIMEOUT in 151.3 s, AMCL error 3.8 cm
+  219.0 s  goal 4 -> (8.20, -6.20)
+  372.2 s  goal 4 TIMEOUT in 151.2 s, AMCL error 0.6 cm
+  372.2 s  goal 5 -> (8.20, 0.40)
+  525.5 s  goal 5 TIMEOUT in 151.3 s, AMCL error 2.4 cm
+  525.5 s  goal 6 -> (0.00, 0.00)
+  607.2 s  goal 6 SUCCEEDED in 79.8 s, AMCL error 0.6 cm

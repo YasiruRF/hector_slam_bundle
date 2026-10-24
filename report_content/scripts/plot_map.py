@@ -95,7 +95,7 @@ def main():
         colors = ['tab:red', 'tab:blue', 'tab:green', 'tab:orange']
         for i, spec in enumerate(a.traj):
             path, xc, yc, label = spec.split(':')
-            rows = list(csv.DictReader(open(path)))
+            rows = [r for r in csv.DictReader(open(path)) if r[xc] and r[yc]]
             xs = [float(r[xc]) for r in rows]
             ys = [float(r[yc]) for r in rows]
             ax.plot(xs, ys, '-', color=colors[i % 4], lw=1.5, label=label)

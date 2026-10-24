@@ -28,5 +28,9 @@ sleep 4
 ros2 bag play "$BAG" --clock 100 > "$OUT/play.log" 2>&1
 sleep 3   # last map publish (map_pub_period 2 s)
 kill -INT $LOGGER; wait $LOGGER || true
-kill -INT $LAUNCH; wait $LAUNCH || true
+kill -INT $LAUNCH; sleep 5
+# launch does not always take its nodes down on SIGINT; the params path is unique per variant
+pkill -9 -f "$(basename "$OUT")/hector_slam.yam[l]" || true
+pkill -9 -f "launch_params_.*" -P $LAUNCH 2>/dev/null || true
+kill -9 $LAUNCH 2>/dev/null || true
 cat "$OUT/logger.log" | tail -1

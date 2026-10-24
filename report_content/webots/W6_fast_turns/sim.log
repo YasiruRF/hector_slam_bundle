@@ -1,0 +1,24 @@
+Warning: QIBusPlatformInputContext: CreateInputContext failed.
+WARNING: Turtlebot4 "Turtlebot4" > Solid "shell_link" > Solid "rplidar_link" > Lidar "rplidar": 'near' is greater than to 'minRange'. Setting 'near' to 0.164.
+WARNING: Turtlebot4 "Turtlebot4" > Solid "shell_link" > DEF shell_collision Mesh: Mesh 'geometry0' has more than 100'000 vertices, it is recommended to reduce the number of vertices.
+WARNING: Turtlebot4 "Turtlebot4" > Solid "shell_link" > Pose  > DEF shell_visual CadShape: Mesh 'geometry0' has more than 100'000 vertices, it is recommended to reduce the number of vertices.
+WARNING: Turtlebot4 "Turtlebot4" > Solid "shell_link" > Solid "oakd_camera_bracket" > Solid "oakd_link" > DEF oakd_pro_visual CadShape: Mesh 'geometry0' has more than 100'000 vertices, it is recommended to reduce the number of vertices.
+INFO: 'Turtlebot4' extern controller: Waiting for local or remote connection on port 1234 targeting robot named 'Turtlebot4'.
+INFO: 'Turtlebot4' extern controller: connected.
+[INFO] [1792851687.229960363] [tb4_webots_bridge]: Patrol waits for SLAM (/map)...
+WARNING: Contact joints between materials 'default' and 'default' will only be created for the 10 deepest contact points instead of all the 22 contact points.
+WARNING: Contact joints between materials 'default' and 'default' will only be created for the 10 deepest contact points instead of all the 25 contact points.
+WARNING: Contact joints between materials 'default' and 'default' will only be created for the 10 deepest contact points instead of all the 15 contact points.
+WARNING: Contact joints between materials 'default' and 'default' will only be created for the 10 deepest contact points instead of all the 28 contact points.
+WARNING: Contact joints between materials 'default' and 'default' will only be created for the 10 deepest contact points instead of all the 25 contact points.
+WARNING: Contact joints between materials 'default' and 'default' will only be created for the 10 deepest contact points instead of all the 25 contact points.
+WARNING: Contact joints between materials 'default' and 'default' will only be created for the 10 deepest contact points instead of all the 25 contact points.
+WARNING: Contact joints between materials 'default' and 'default' will only be created for the 10 deepest contact points instead of all the 25 contact points.
+WARNING: Contact joints between materials 'default' and 'default' will only be created for the 10 deepest contact points instead of all the 25 contact points.
+WARNING: Contact joints between materials 'default' and 'default' will only be created for the 10 deepest contact points instead of all the 25 contact points.
+WARNING: Contact joints between materials 'default' and 'default' will only be created for the 10 deepest contact points instead of all the 22 contact points.
+WARNING: Contact joints between materials 'default' and 'default' will only be created for the 10 deepest contact points instead of all the 58 contact points.
+WARNING: Contact joints between materials 'default' and 'default' will only be created for the 10 deepest contact points instead of all the 17 contact points.
+[INFO] [1792852016.145305755] [tb4_webots_bridge]: Patrol finished
+INFO: <extern>: Terminating.
+INFO: 'Turtlebot4' extern controller: disconnected.

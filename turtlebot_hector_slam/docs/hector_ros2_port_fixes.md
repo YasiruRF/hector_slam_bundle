@@ -239,6 +239,17 @@ If the PR is merged, the fork can switch back to tracking upstream.
   ROS 1 dependency stubbed with "for now" during migration. Other
   `TODO`/"disabled for now" comments in the port are worth a check before
   relying on them.
+- **`use_tf_pose_start_estimate` did not work (fixed here, 2026-10-24, not
+  offered upstream yet).** The option seeds each scan match with the TF pose
+  instead of the last match. The code looked up `map → base_link` at the scan
+  stamp, but in the port `map → odom` is Hector's own output, stamped with the
+  *previous* scan. Every lookup needed extrapolation, blocked for its 0.5 s
+  timeout and fell back to the last pose, so Hector dropped to ~2 Hz and the map
+  got worse, not better (real-robot bag replay, `report_content/METRICS_REPORT.md`).
+  It now uses the last match pose plus the `odom → base_link` motion since the
+  previous scan, which is what the option is for: a wheel-odometry prior for the
+  matcher. It stays off by default (`config/hector_slam.yaml`), so Hector is
+  still lidar-only unless it is turned on.
 
 ## 7. Not part of the port
 

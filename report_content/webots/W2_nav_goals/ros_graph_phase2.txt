@@ -1,0 +1,54 @@
+/amcl
+  publishes:  /amcl_pose, /particle_cloud, /tf
+  subscribes: /initialpose, /map, /scan, /tf, /tf_static
+/bt_navigator
+  publishes:  -
+  subscribes: /goal_pose, /odom, /tf, /tf_static
+/bt_navigator_navigate_through_poses_rclcpp_node
+  publishes:  /behavior_tree_log
+  subscribes: /controller_selector, /planner_selector
+/bt_navigator_navigate_to_pose_rclcpp_node
+  publishes:  /behavior_tree_log
+  subscribes: /controller_selector, /planner_selector
+/collision_monitor
+  publishes:  /cmd_vel_unstamped, /collision_monitor/collision_points_marker, /collision_monitor_state
+  subscribes: /cmd_vel_smoothed, /local_costmap/published_footprint, /scan, /tf, /tf_static
+/controller_server
+  publishes:  /cmd_vel_nav, /cost_cloud, /evaluation, /local_plan, /marker, /received_global_plan, /transformed_global_plan
+  subscribes: /odom, /speed_limit
+/docking_server
+  publishes:  /cmd_vel, /dock_pose, /docking_trajectory, /filtered_dock_pose, /staging_pose
+  subscribes: /local_costmap/costmap_raw, /local_costmap/costmap_raw_updates, /local_costmap/published_footprint
+/global_costmap/global_costmap
+  publishes:  -
+  subscribes: /global_costmap/footprint, /map, /scan
+/lifecycle_manager_localization
+  publishes:  /diagnostics
+  subscribes: -
+/lifecycle_manager_navigation
+  publishes:  /diagnostics
+  subscribes: -
+/local_costmap/local_costmap
+  publishes:  /local_costmap/clearing_endpoints, /local_costmap/costmap, /local_costmap/costmap_raw, /local_costmap/costmap_raw_updates, /local_costmap/costmap_updates, /local_costmap/published_footprint, /local_costmap/voxel_grid, /local_costmap/voxel_layer, /local_costmap/voxel_layer_raw, /local_costmap/voxel_layer_raw_updates, /local_costmap/voxel_layer_updates
+  subscribes: /local_costmap/footprint, /scan
+/map_server
+  publishes:  /map
+  subscribes: -
+/planner_server
+  publishes:  -
+  subscribes: -
+/route_server
+  publishes:  /plan, /route_graph, /speed_limit
+  subscribes: /global_costmap/costmap_raw, /global_costmap/costmap_raw_updates, /tf, /tf_static
+/smoother_server
+  publishes:  /plan_smoothed
+  subscribes: /global_costmap/costmap_raw, /global_costmap/costmap_raw_updates, /global_costmap/published_footprint, /tf, /tf_static
+/tb4_webots_bridge
+  publishes:  /ground_truth/pose, /imu, /odom, /scan, /tf, /tf_static
+  subscribes: /cmd_vel_unstamped, /kidnap
+/velocity_smoother
+  publishes:  /cmd_vel_smoothed
+  subscribes: /cmd_vel_nav
+/waypoint_follower
+  publishes:  -
+  subscribes: -

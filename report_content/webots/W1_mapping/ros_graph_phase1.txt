@@ -1,0 +1,18 @@
+/hector_mapping
+  publishes:  /map, /map_metadata, /poseupdate, /slam_cloud, /slam_out_pose, /tf
+  subscribes: /initialpose, /scan, /syscommand
+/hector_trajectory_server
+  publishes:  /trajectory
+  subscribes: /syscommand
+/pose_logger
+  publishes:  -
+  subscribes: /floor, /ground_truth/pose, /tf, /tf_static
+/run_logger
+  publishes:  -
+  subscribes: /ground_truth/pose, /map, /scan, /slam_out_pose, /tf, /tf_static
+/rviz2
+  publishes:  /initialpose
+  subscribes: /global_costmap/costmap, /global_costmap/costmap_updates, /map, /map_updates, /plan, /scan, /trajectory
+/tb4_webots_bridge
+  publishes:  /ground_truth/pose, /imu, /odom, /scan, /tf, /tf_static
+  subscribes: /cmd_vel_unstamped, /kidnap

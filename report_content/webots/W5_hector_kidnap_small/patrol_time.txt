@@ -1,0 +1,1 @@
+patrol time 410 s (wall)

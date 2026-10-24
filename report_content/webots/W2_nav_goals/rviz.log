@@ -1,0 +1,18 @@
+QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-root'
+[INFO] [1792852098.252091275] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1792852098.252214181] [rviz2]: OpenGl version: 4.5 (GLSL 4.5)
+[INFO] [1792852098.308307592] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1792852099.304456445] [rviz2]: Trying to create a map of size 512 x 512 using 1 swatches
+[INFO] [1792852099.305931100] [rviz2]: Trying to create a map of size 512 x 512 using 1 swatches
+[ERROR] [1792852099.330363215] [rviz2]: rviz/glsl120/indexed_8bit_image.vert
+rviz/glsl120/indexed_8bit_image.frag
+ GLSL link result : 
+active samplers with a different type refer to the same texture image unit
+[ERROR] [1792852099.656507907] [rviz2]: Lookup would require extrapolation into the future.  Requested time 4.483722 but the latest data is at time 4.464000, when looking up transform from frame [rplidar_link] to frame [map]
+[INFO] [1792852100.135343469] [rviz2]: Trying to create a map of size 50 x 50 using 1 swatches
+[INFO] [1792852105.710996379] [rviz]: Message Filter dropping message: frame 'odom' at time 0.608 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1792852108.824895279] [rviz]: Message Filter dropping message: frame 'odom' at time 3.520 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1792852109.035676864] [rviz]: Message Filter dropping message: frame 'odom' at time 3.728 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1792852842.968333253] [rviz]: Message Filter dropping message: frame 'rplidar_link' at time 3.376 for reason 'discarding message because the queue is full'
+[INFO] [1792852845.304479596] [rviz]: Message Filter dropping message: frame 'rplidar_link' at time 620.944 for reason 'discarding message because the queue is full'
+[INFO] [1792852847.672465390] [rviz]: Message Filter dropping message: frame 'rplidar_link' at time 623.520 for reason 'discarding message because the queue is full'
