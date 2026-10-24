@@ -160,6 +160,12 @@ you did not pass `use_sim_time:=true`.
 
 ## 4. Run: step by step
 
+> **Recommended on the real robot: the two-phase run in
+> [`ASSIGNMENT_GUIDE.md`](ASSIGNMENT_GUIDE.md).** Map with Hector alone, save the map, then run
+> Nav2 + AMCL on the saved map (`nav_on_map_launch.py`). On the first hardware
+> tests, Hector + Nav2 in one launch gave an empty map, while Hector alone mapped fine.
+> Steps B and C below (Nav2 on the live Hector map) are what worked in Webots.
+
 Do it in this order. Each step needs the previous one to look good before you
 continue. All commands run on the laptop with the environment from section 2.
 

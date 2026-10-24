@@ -29,3 +29,24 @@ reproduces a robot whose clock disagrees with the laptop's (`run_sim_docker.sh -
 - Goals that time out are frontiers next to walls where DWB finds no valid trajectory ("Failed to make progress"; the robot stalls 50–90 s, the explorer blacklists the goal). Exploration completes in every run.
 - D's `pose.csv` is cut at the end of the exploration run (591 samples). The logger kept running into a deliberate Nav2-restart test, which resets Hector's map frame.
 - Time is from Start to "exploration complete" (wall clock; the sim runs at about real time).
+
+## Two-phase run (E): map first, then Nav2 on the saved map
+
+The workflow now recommended for the real robot (`docs/ASSIGNMENT_GUIDE.md`); Hector and Nav2
+never run at the same time.
+1. `native/run.sh map` (Hector only) while the bridge's `--patrol` drove the robot around the room, then
+   `native/run.sh savemap webots_test`. Map score: precision 98.9 %, recall 100.0 %,
+   coverage 97.6 %, mean wall error 2.6 cm (`eval.txt`, `eval.png`).
+2. Hector stopped and the sim restarted, so the robot is back at the mapping start pose. Then
+   `native/run.sh nav webots_test` (map_server + AMCL + Nav2, AMCL initial pose 0, 0, 0)
+   and three `NavigateToPose` goals:
+
+| Goal (map) | Result | Robot stopped at (ground truth) | AMCL estimate | AMCL error |
+| --- | --- | --- | --- | --- |
+| (2.0, 0.0) | SUCCEEDED | (1.799, 0.105) | (1.796, 0.127) | 2.3 cm |
+| (4.5, -1.2) | SUCCEEDED | (4.299, -1.151) | (4.268, -1.148) | 3.2 cm |
+| (0.5, 0.5) | SUCCEEDED | (0.695, 0.406) | (0.709, 0.409) | 1.4 cm |
+
+The robot stops up to ~0.2 m short of each goal: that is the goal checker's 0.25 m
+`xy_goal_tolerance`, not a localisation error.
+Files: `map.*`, `eval.*`, `phase1_hector.log`, `phase2_nav.log`.
