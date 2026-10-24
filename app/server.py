@@ -84,6 +84,9 @@ class Proc:
     def add(self, line):
         line = re.sub(r'\x1b\[[0-9;]*m', '', line)
         self.log.append(line)
+        # The deque only keeps the tail for the browser; the session folder keeps every line.
+        with open(self.app.session_dir / f'log_{self.name}.txt', 'a') as f:
+            f.write(line + '\n')
         asyncio.create_task(self.app.broadcast({'type': 'log', 'proc': self.name, 'line': line}))
 
     def write(self, obj):
@@ -154,6 +157,16 @@ class App:
         d = DATA / 'results' / self.session
         d.mkdir(parents=True, exist_ok=True)
         return d
+
+    def fresh_path(self, stem, ext=''):
+        """Session path that does not exist yet: stem, stem_2, stem_3, ... Evidence is never overwritten
+        (and ros2 bag refuses an existing output folder)."""
+        d = self.session_dir
+        p, n = d / f'{stem}{ext}', 1
+        while p.exists():
+            n += 1
+            p = d / f'{stem}_{n}{ext}'
+        return p
 
     async def broadcast(self, msg):
         if msg['type'] in ('status', 'pose', 'map', 'scan', 'procs', 'settings'):
@@ -415,7 +428,7 @@ class App:
         self.slam_explore, self.nav_active, self.nav_watch = explore, False, True
         self.slam_started = time.monotonic()
         await self.procs['slam'].start(argv, on_line=self.on_slam_line)
-        self.procs['helper'].write({'cmd': 'traj_start', 'path': str(self.session_dir / 'trajectory.csv')})
+        self.procs['helper'].write({'cmd': 'traj_start', 'path': str(self.fresh_path('trajectory', '.csv'))})
         return 'started'
 
     def on_slam_line(self, line):
@@ -536,6 +549,7 @@ class App:
     # ---- evidence ----
     async def save_map(self, name):
         name = re.sub(r'[^A-Za-z0-9_-]', '', name) or 'map'
+        name = self.fresh_path(name, '.yaml').stem
         ns = self.ns
         p = self.procs['map_saver']
         await p.start(['ros2', 'run', 'nav2_map_server', 'map_saver_cli', '-f', str(self.session_dir / name),
@@ -581,8 +595,6 @@ class App:
             except Exception as e:
                 summary['maps'].append({'map': y.name, 'error': repr(e)})
         (d / 'summary.json').write_text(json.dumps(summary, indent=2, default=str))
-        for n in ('slam', 'relay', 'helper'):
-            (d / f'log_{n}.txt').write_text('\n'.join(self.procs[n].log))
         zpath = d.with_suffix('.zip')
         with zipfile.ZipFile(zpath, 'w', zipfile.ZIP_DEFLATED) as z:
             for f in d.rglob('*'):
@@ -723,7 +735,7 @@ async def api_bag(request):
     if action == 'start' and not p.running:
         ns = st.ns
         topics = [f'{ns}/{t}' for t in ('scan', 'odom', 'map', 'tf', 'tf_static')]
-        await p.start(['ros2', 'bag', 'record', '-o', str(st.session_dir / 'rosbag'), *topics])
+        await p.start(['ros2', 'bag', 'record', '-o', str(st.fresh_path('rosbag')), *topics])
     elif action == 'stop':
         await p.stop()
     return {'running': p.running}
