@@ -1,0 +1,10 @@
+map: map.yaml
+occupied cells: SLAM 2450, ground truth (visible) 1446
+wall precision  (SLAM wall within 0.10 m of a true wall):  98.5%
+wall recall     (true wall within 0.10 m of a SLAM wall):  98.2%
+free coverage   (true free space mapped as free):           97.1%
+mean wall error (SLAM occupied -> nearest true obstacle):  0.027 m
+pose log: 366 samples over 368 s sim time
+position error: mean 0.010 m, RMSE 0.011 m, max 0.045 m
+heading error:  mean 0.74 deg, max 2.01 deg
+figure: eval.png

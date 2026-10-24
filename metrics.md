@@ -47,10 +47,11 @@ Computed by `turtlebot_hector_slam/webots/tools/evaluate_map.py` (map vs
 - Goals that time out are frontiers near walls that Nav2 cannot reach ("Failed to make progress",
   robot stalls 50–90 s, then the explorer blacklists the goal and moves on). Exploration still
   completes, so treat it as a known limitation of the frontier + DWB setup, not a SLAM error.
-- Figures: `webots/results/webots_eval.png` (map overlaid on ground truth), `docs/images/rviz_explored.png`,
+- Files for B–D (maps, pose logs, evaluator output, overlay figures, launch logs, and the two failing
+  clock-offset logs): `turtlebot_hector_slam/webots/results/2026-10-24/` (see its README).
+- Figures: `webots/results/2026-10-24/*/eval.png` (map and trajectory overlaid on ground truth),
+  `webots/results/webots_eval.png` (run A), `docs/images/rviz_explored.png`,
   `docs/images/map_vs_ground_truth.png`, `docs/images/webots_world.png`, `docs/images/dashboard.png`.
-- Raw files for B–D are **not in git** yet: `~/ros2_jazzy_ws/regr/` (maps, pose CSVs, launch logs)
-  and the dashboard export `/root/tb4_data/results/20261024_055108.zip` inside the `jazzy` container.
 
 ### Reproduce
 ```bash
@@ -178,7 +179,7 @@ Optional: set `output_timing: true` in `config/hector_slam.yaml` to log millisec
 | Sensitive to fast rotation | smeared walls if turned fast; Nav2 capped at 0.6 rad/s | the Gauss–Newton matcher starts from the previous pose with no odometry prior; large inter-scan motion leaves its convergence basin |
 | Featureless corridors, glass | sliding along a corridor, holes at glass | the scan-matching Hessian is degenerate along a corridor; glass returns no lidar points |
 | Nav2 stalls near walls | "Failed to make progress", 3–4 timed-out goals per run (table 1) | frontiers right at walls + inflation radius; DWB cannot find a valid trajectory |
-| Robot/laptop clock offset blocked Nav2 on hardware (found and fixed) | first hardware test; reproduced in Webots with `--clock-offset -5`: robot never moved, then explored fully after the fix (run C) | Jazzy collision monitor drops "stale" scans and the controller rejects mismatched TF stamps; robot stamps use the Pi's clock |
+| Robot/laptop clock offset blocked Nav2 on hardware (found and fixed) | first hardware test; reproduced in Webots with `--clock-offset -5`: robot never moved, then explored fully after the fix (run C; logs in `webots/results/2026-10-24/C_clock_offset_-5s/`) | Jazzy collision monitor drops "stale" scans and the controller rejects mismatched TF stamps; robot stamps use the Pi's clock |
 | Fast DDS startup race | Nav2 never activated once (`failed to send response to /controller_server/change_state`); dashboard now restarts it | lifecycle service reply lost during discovery |
 | Gazebo GPU lidar returns constant 0.16 m | `gazebo/` notes; software render works but runs 0.15–0.2× real time | rendering-based lidar on the GPU path in this setup |
 
