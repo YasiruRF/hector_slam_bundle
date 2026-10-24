@@ -174,11 +174,14 @@ class Helper(Node):
     def tf_fresh(self, target, source, max_age=2.0):
         """True only if the transform is still being published (the buffer keeps the last one forever)."""
         try:
-            t = self.tf.get_latest_common_time(target, source)
+            t = self.tf.get_latest_common_time(target, source).nanoseconds
         except Exception:
             return False
-        now = self.get_clock().now()   # tf2 hands back a Time of another clock type; rclpy refuses to mix them
-        return (now - Time(nanoseconds=t.nanoseconds, clock_type=now.clock_type)).nanoseconds * 1e-9 < max_age
+        try:   # compare with the robot's own latest odom TF, so an unsynced robot clock does not matter
+            ref = self.tf.get_latest_common_time('odom', 'base_link').nanoseconds
+        except Exception:
+            ref = self.get_clock().now().nanoseconds
+        return (ref - t) * 1e-9 < max_age
 
     def tick_pose(self):
         mp = self.lookup('map', 'base_link')

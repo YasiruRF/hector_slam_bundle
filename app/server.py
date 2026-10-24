@@ -282,19 +282,15 @@ class App:
                       '' if hz >= 4 else 'Low rate: Hector will smear the map. Check Wi-Fi quality.')
         d = pr.get('scan_delay')
         if d is not None and not self.sim:
-            # Scan stamps come from the robot's clock, Nav2 compares them with this computer's.
-            # Normal is ~0.1-0.3 s (one lidar revolution + Wi-Fi). More means the clocks differ, and
-            # Nav2's collision monitor then zeroes every command while teleop still works.
-            sync_hint = ('Sync the clocks: run  timedatectl  on the robot and here (want "synchronized: yes"); '
-                         'sudo apt install chrony and point both at the same NTP server.')
+            # Scan stamps come from the robot's clock. Normal is ~0.1-0.3 s (one lidar revolution + Wi-Fi);
+            # more means the clocks differ. nav2.yaml is set up not to need synced clocks (collision
+            # monitor source_timeout 0, no base shift correction), so this only informs.
             if abs(d) <= 0.5:
                 await add('clock', 'Clock sync', 'ok', f'scans arrive {d} s after their timestamp')
-            elif abs(d) <= 1.0:
-                await add('clock', 'Clock sync', 'warn', f'scans arrive {d} s after their timestamp: Nav2 will be unreliable',
-                          sync_hint)
             else:
-                await add('clock', 'Clock sync', 'fail',
-                          f'robot and this computer disagree by ~{d} s: Nav2 will refuse to move the robot', sync_hint)
+                await add('clock', 'Clock sync', 'warn',
+                          f'robot and this computer clocks differ by ~{d} s (Nav2 is configured to cope)',
+                          'Optional: sync both with NTP (timedatectl / chrony) for tidier logs and rosbags.')
         if pr['odom_hz'] == 0:
             await add('odom', 'Odometry /odom', 'fail', 'no odometry messages',
                       'The Create 3 is not publishing: check its connection to the Raspberry Pi and the namespace setting.')

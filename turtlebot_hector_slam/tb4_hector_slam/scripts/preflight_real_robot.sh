@@ -23,11 +23,11 @@ ok "publisher reliability: ${QOS:-unknown} (Hector subscribes with sensor-data Q
 FRAME=$(timeout 10 ros2 topic echo "$NS/scan" --once --field header.frame_id 2>/dev/null | head -1)
 [ -n "$FRAME" ] && ok "frame_id: $FRAME (must exist in TF under base_link)" || warn "no /scan message in 10 s"
 
-echo "clock sync (scan stamps are robot time; Nav2 compares them with this computer's clock)"
+echo "clock offset (informational: nav2.yaml is set up to work without clock sync)"
 DELAY=$(timeout 8 ros2 topic delay "$NS/scan" 2>/dev/null | grep -m1 "average delay" | awk '{print $3}')
-if [ -z "$DELAY" ]; then warn "could not measure /scan delay"
-elif awk -v d="$DELAY" 'BEGIN { exit !(d < 0.5 && d > -0.5) }'; then ok "scans arrive ${DELAY} s after their stamp"
-else warn "scans arrive ${DELAY} s after their stamp: robot and laptop clocks differ, Nav2's collision monitor will stop the robot. Sync both with chrony/NTP (timedatectl)"; fi
+if [ -z "$DELAY" ]; then echo "        could not measure /scan delay"
+elif awk -v d="$DELAY" 'BEGIN { exit !(d < 0.5 && d > -0.5) }'; then ok "scans arrive ${DELAY} s after their stamp (clocks agree)"
+else ok "scans arrive ${DELAY} s after their stamp: robot and laptop clocks differ (fine for this setup)"; fi
 
 echo "cmd_vel (Nav2 here outputs Twist on ${NS}/cmd_vel_unstamped)"
 for t in cmd_vel cmd_vel_unstamped; do

@@ -2,8 +2,8 @@
 
 **Status: first hardware test (2026-10-23):** connection, teleop, undock/dock
 and the lidar worked; Nav2 goals and autonomous exploration did not. The most
-likely cause, and the fixes, are in section 5.6 (clock sync and the
-collision monitor). The robot runs ROS 2 **Jazzy** (TurtleBot 4 image for
+likely cause (robot/laptop clock offset) and the fixes are in section 5.6;
+no clock sync is needed with the current `nav2.yaml`. The robot runs ROS 2 **Jazzy** (TurtleBot 4 image for
 Jazzy, Create 3 firmware I.x).
 
 The same launch files are used as in simulation. The differences are:
@@ -245,7 +245,7 @@ Change **one thing at a time**, and re-run the same route to compare.
 | --- | --- | --- |
 | `/map` empty, Hector silent | QoS patch missing or `/scan` not arriving | `ros2 topic info /scan -v`: Hector subscriber must be `BEST_EFFORT`; check `ros2 topic hz /scan` on the laptop |
 | Map is skewed, robot slides sideways | Laser-transform patch missing | Rebuild Hector with the second patch (README step 1) |
-| `Transform data too old` / `extrapolation into the future` in Nav2 | Network latency, or clocks differ between robot and laptop | Sync clocks (below), then the controller's `transform_tolerance` is already 1.0; see 5.6 |
+| `Transform data too old` / `extrapolation into the future` in Nav2 | Network latency, or clocks differ between robot and laptop | See 5.6: the current `nav2.yaml` already handles both |
 | Robot stops often, `Failed to make progress` | Costmap too tight, or goal tolerance too small | Raise `inflation_radius` (`0.45` → `0.55`) or `xy_goal_tolerance` (`0.25` → `0.35`) |
 | Map smears on turns | Rotating too fast | Lower `max_vel_theta` in `nav2.yaml` (`1.0` → `0.6`); in teleop keep turns slow |
 | Map gets noisy / fills with speckles | Lidar noise, glass, shiny floors | In `hector_slam.yaml` lower `update_factor_occupied` (`0.9` → `0.8`), raise `laser_min_dist` (`0.15` → `0.2`) |
@@ -322,44 +322,46 @@ the area.
 base is about 0.34 m in diameter). Do not lower it. Raise it a little (`0.2`)
 if the robot clips furniture.
 
-### 5.6 Clock sync and the collision monitor (why Nav2 did not drive)
+### 5.6 Clock offset between robot and laptop (why Nav2 did not drive)
 
 Scan and TF stamps come from the robot's clock; Nav2 on the laptop compares
-them with the laptop's clock. Jazzy's `collision_monitor` sits between Nav2
-and the robot, and it publishes **zero velocity** ("Robot to stop due to
-invalid source") whenever the latest scan looks older than `source_timeout`
-(1 s) by the laptop's clock, or it cannot transform the scan in time.
-Teleop does not go through it, so hand driving works while every Nav2 goal
-and the explorer go nowhere. That is what the first hardware test showed.
+some of them with the laptop's clock. The Raspberry Pi has no battery-backed
+clock, so without internet it boots with a stale time. Two places in Nav2
+Jazzy then stop the robot, while teleop (which bypasses Nav2) still works.
+That is what the first hardware test showed.
 
-What was changed in `config/nav2.yaml` for the Wi-Fi link:
-`collision_monitor` `base_shift_correction: False` (it no longer needs
-odom→base_link at *now*) and `transform_tolerance: 0.5`; DWB
-`transform_tolerance: 1.0`. A clock offset above ~1 s still stops the robot,
-so the clocks must agree. The dashboard checks this ("Clock sync", measured
-from `/scan` stamps; ~0.1–0.3 s is normal) and so does
-`native/run.sh preflight`. By hand: `ros2 topic delay /scan`.
+1. `collision_monitor` publishes **zero velocity** ("Robot to stop due to
+   invalid source") when the latest scan looks older than `source_timeout`
+   by the laptop's clock, or when it cannot transform the scan in time.
+2. The controller converts the planned path's end pose (stamped with the
+   laptop's clock) into `odom` and fails with "Transform data too old" when
+   the gap to the robot's TF is above the local costmap's
+   `transform_tolerance`.
 
-The Raspberry Pi has no battery-backed clock. If it has no internet it boots
-with a stale time. Fix it like this:
+Settings in `config/nav2.yaml` so that **no clock sync is needed**:
+
+| Where | Setting | Effect |
+| --- | --- | --- |
+| `collision_monitor` | `source_timeout: 0.0` | no age check on the scan (it is still used to slow down near obstacles) |
+| `collision_monitor` | `base_shift_correction: False` | no TF lookup at the laptop's "now" |
+| `local_costmap` | `transform_tolerance: 86400.0` | the end-pose conversion falls back to the latest TF; elsewhere this is only a wait timeout used while TF is missing |
+| DWB `FollowPath` | `transform_tolerance: 1.0` | Wi-Fi lag between Hector's map→odom and odom |
+
+Tested in Webots with the robot's stamps shifted 5 s behind the simulation
+clock (`run_sim_docker.sh --clock-offset -5`): with the old settings the
+robot never moved; with these it explored the whole room.
+
+Trade-off: with no scan age check, the collision monitor keeps using the last
+scan if the lidar stops. The dashboard's lidar watchdog stops the robot after
+3 s without `/scan`; in terminal mode watch the robot yourself.
+
+The dashboard still measures the offset ("Clock sync", from `/scan` stamps;
+~0.1–0.3 s is normal) as information only. By hand: `ros2 topic delay /scan`.
+Syncing is optional but makes logs and rosbags easier to read:
 
 ```bash
-# on both machines
-timedatectl status | grep -E "synchronized|NTP"
-sudo apt install chrony && sudo systemctl enable --now chrony
+ssh -t ubuntu@<robot-ip> "sudo date -s @$(date +%s.%N)"   # one-off, from the laptop
 ```
-
-For a robot with no internet, point both machines at the same NTP source
-(e.g. make the laptop an NTP server for the robot).
-
-Quick fix for a demo (lasts until the robot reboots or its NTP changes it),
-run on the laptop:
-
-```bash
-ssh -t ubuntu@<robot-ip> "sudo date -s @$(date +%s.%N)"
-```
-
-The Create 3 takes its time from the Pi, so give it a minute (or reboot the Create 3 from its web page).
 
 ---
 
@@ -417,7 +419,6 @@ Nav2 both publish `/cmd_vel_unstamped` and must not run together.
 ## 9. Checklist
 
 - [ ] Same `ROS_DOMAIN_ID` / RMW on laptop and robot; `ros2 topic hz /scan` ≈ 10 Hz
-- [ ] Clocks synced
 - [ ] Robot undocked; nothing else publishes `map → odom`
 - [ ] `use_sim_time` is `False` in `hector_mapping` and `controller_server`
 - [ ] `ros2 topic info /scan -v`: Hector subscriber is `BEST_EFFORT`

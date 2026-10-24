@@ -40,7 +40,7 @@ native/run.sh launch explore:=true use_rviz:=true   # SLAM + Nav2 without the da
 ```
 
 In the `jazzy` dev container the same scripts work: `jazzy ./src/turtlebot-hector-slam-jazzy/native/run.sh launch`.
-Real-robot notes, including the clock-sync requirement: `turtlebot_hector_slam/docs/REAL_ROBOT.md`.
+Real-robot notes (no clock sync needed): `turtlebot_hector_slam/docs/REAL_ROBOT.md`.
 
 ## Run in Webots
 
@@ -61,4 +61,4 @@ Result of a full autonomous exploration run (`turtlebot_hector_slam/webots/resul
 
 - [x] Webots (SLAM + Nav2 + frontier exploration, scored against ground truth)
 - [~] Gazebo: the TB4 maze sim runs headless in the container (`turtlebot_hector_slam/gazebo/run_gz_headless.sh`) and the SLAM + Nav2 + explorer stack drives it, but without a GPU the lidar renders on the CPU at about 0.15x real time and falling, so mapping is impractical. A first run gave a partly corrupted map (`gazebo/maze_partial_map.png`). Not scored. With a GPU the sim is fast enough, but the dashboard-started Gazebo run still gave an empty Hector map (see Known issues in `docker/README.md`).
-- [~] Real TurtleBot 4: first test 2026-10-23, teleop/undock/lidar worked, Nav2 goals and exploration did not (most likely the collision monitor stopping the robot; fix and clock check in `turtlebot_hector_slam/docs/REAL_ROBOT.md` 5.6, not yet re-tested)
+- [~] Real TurtleBot 4: first test 2026-10-23, teleop/undock/lidar worked, Nav2 goals and exploration did not (most likely the robot/laptop clock offset tripping Nav2; fixed so no clock sync is needed, see `turtlebot_hector_slam/docs/REAL_ROBOT.md` 5.6; not yet re-tested on hardware)

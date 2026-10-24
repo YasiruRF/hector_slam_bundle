@@ -45,8 +45,9 @@ def wrap(a):
 
 
 class Bridge:
-    def __init__(self, patrol, lidar_period_ms, reverse_scan):
+    def __init__(self, patrol, lidar_period_ms, reverse_scan, clock_offset=0.0):
         self.robot = Robot()
+        self.clock_offset = clock_offset  # added to sensor stamps, not to /clock
         self.dt = int(self.robot.getBasicTimeStep())
         self.patrol = patrol  # list of (x, y) waypoints, or None
         self.reverse_scan = reverse_scan
@@ -98,10 +99,15 @@ class Bridge:
         if not self.patrol:
             self.cmd = (msg.linear.x, msg.angular.z)
 
-    def now(self):
-        t = self.robot.getTime()
+    def now(self, offset=0.0):
+        t = max(0.0, self.robot.getTime() + offset)   # a negative offset would go below 0 at start
         return rclpy.time.Time(seconds=int(t),
                                nanoseconds=int((t % 1) * 1e9)).to_msg()
+
+    def robot_now(self):
+        # Stamp for robot data. --clock-offset makes it disagree with /clock,
+        # like a TurtleBot whose clock is not synced with the laptop.
+        return self.now(self.clock_offset)
 
     def publish_static(self):
         t = TransformStamped()
@@ -153,7 +159,7 @@ class Bridge:
             self.th = wrap(self.th + dth)
         self.prev = (l, r)
 
-        stamp = self.now()
+        stamp = self.robot_now()
         t = TransformStamped()
         t.header.stamp = stamp
         t.header.frame_id = 'odom'
@@ -190,7 +196,7 @@ class Bridge:
         n = len(ranges)
         fov = self.lidar.getFov()
         s = LaserScan()
-        s.header.stamp = self.now()
+        s.header.stamp = self.robot_now()
         s.header.frame_id = 'rplidar_link'
         s.angle_min = -fov / 2
         s.angle_increment = fov / n
@@ -259,7 +265,7 @@ class Bridge:
             q = yaw_quat(ryaw)
             gt.pose.orientation.z, gt.pose.orientation.w = q[2], q[3]
             self.gt_pub.publish(gt)
-            self.publish_imu(clock.clock)
+            self.publish_imu(self.robot_now())
 
             t = self.robot.getTime()
             period = self.lidar.getSamplingPeriod() / 1000.0
@@ -283,6 +289,9 @@ if __name__ == '__main__':
                     action='store_false',
                     help='publish Webots ranges in their native (clockwise) '
                          'order; this mirrors the scan, debugging only')
+    ap.add_argument('--clock-offset', type=float, default=0.0,
+                    help='seconds added to scan/odom/TF/IMU stamps but not to /clock: '
+                         'simulates a robot clock that is out of sync (testing)')
     a = ap.parse_args()
     patrol = importlib.import_module(a.layout).PATROL if a.patrol else None
-    Bridge(patrol, a.lidar_period_ms, a.reverse_scan).run()
+    Bridge(patrol, a.lidar_period_ms, a.reverse_scan, a.clock_offset).run()

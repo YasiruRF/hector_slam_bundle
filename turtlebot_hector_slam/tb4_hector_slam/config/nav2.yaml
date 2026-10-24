@@ -105,6 +105,12 @@ local_costmap:
       global_frame: odom
       robot_base_frame: base_link
       use_sim_time: True
+      # The controller converts the path's end pose (stamped with this
+      # computer's clock) into odom; when the robot's clock differs, tf2 has no
+      # data at that stamp and Nav2 falls back to the latest transform only if
+      # the gap is below this. Elsewhere it is just a wait timeout used while TF
+      # is missing, so a large value lets an unsynced robot drive.
+      transform_tolerance: 86400.0
       rolling_window: true
       width: 3
       height: 3
@@ -267,13 +273,15 @@ collision_monitor:
     # to invalid source") when the scan is older than source_timeout by this
     # computer's clock, or when it cannot transform it in time. Teleop does not
     # pass through here, which is why driving by hand worked on the real robot
-    # while Nav2 goals did not. base_shift_correction looks up odom->base_link
-    # at *now*, which over Wi-Fi often isn't there within the tolerance, so it
-    # is off; the scan is used as-is (a few cm of lag at 0.15 m/s).
-    # A robot/laptop clock offset above ~1 s still stops it: sync the clocks
-    # (the dashboard's connection checks measure this).
+    # while Nav2 goals did not. The scan stamps come from the robot's clock, so
+    # an unsynced robot made every scan look "old".
+    # source_timeout 0 turns that age check off (the scan is still used to slow
+    # down near obstacles); the dashboard's lidar watchdog stops the robot if
+    # /scan really stops. base_shift_correction looks up odom->base_link at
+    # *now* (this computer's clock), so it is off; the scan is used as-is (a
+    # few cm of lag at 0.15 m/s). With both, no robot/laptop clock sync is needed.
     transform_tolerance: 0.5
-    source_timeout: 1.0
+    source_timeout: 0.0
     base_shift_correction: False
     stop_pub_timeout: 2.0
     polygons: ["FootprintApproach"]
