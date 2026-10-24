@@ -1,0 +1,15 @@
+[WARN] [1792841255.199166863] [rcl]: ROS_LOCALHOST_ONLY is deprecated but still honored if it is enabled. Use ROS_AUTOMATIC_DISCOVERY_RANGE and ROS_STATIC_PEERS instead.
+[WARN] [1792841255.199188493] [rcl]: 'localhost_only' is disabled, 'automatic_discovery_range' and 'static_peers' will be used.
+[INFO] [1792841255.222536615] [map_saver]:
+	map_saver lifecycle node launched.
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1792841255.222704458] [map_saver]: Creating
+[INFO] [1792841255.222856857] [map_saver]: Configuring
+[INFO] [1792841255.226796927] [map_saver]: Saving map from '/map' topic to '/home/student/tb4_data/results/20261024_165705/map' file
+[WARN] [1792841255.226838365] [map_saver]: Free threshold unspecified. Setting it to default value: 0.250000
+[WARN] [1792841255.226847528] [map_saver]: Occupied threshold unspecified. Setting it to default value: 0.650000
+[ERROR] [1792841257.229074008] [map_saver]: Failed to spin map subscription
+[INFO] [1792841257.230725839] [map_saver]: Destroying
+[ros2run]: Process exited with failure 1
+[exited with code 1]

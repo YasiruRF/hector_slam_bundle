@@ -1,0 +1,113 @@
+{
+  "session": "20261024_165705",
+  "settings": {
+    "namespace": "",
+    "domain_id": 0,
+    "rmw": "rmw_fastrtps_cpp",
+    "robot_ip": "",
+    "discovery_server": "",
+    "cmd_vel_mode": "auto",
+    "max_lin": 0.2,
+    "max_ang": 0.8,
+    "scan_watchdog": true,
+    "show_windows": true,
+    "target": "real",
+    "sim_world": "maze",
+    "sim_model": "standard",
+    "sim_domain_id": 42,
+    "sim_render": "software"
+  },
+  "preflight": {
+    "steps": [
+      {
+        "id": "settings",
+        "title": "ROS settings",
+        "status": "ok",
+        "detail": "domain 0, rmw_fastrtps_cpp, namespace '(none)'",
+        "hint": ""
+      },
+      {
+        "id": "ping",
+        "title": "Robot reachable",
+        "status": "warn",
+        "detail": "no robot IP set, skipped",
+        "hint": "Enter it in Settings to test the network."
+      },
+      {
+        "id": "dds",
+        "title": "ROS 2 discovery",
+        "status": "ok",
+        "detail": "15 nodes, 81 topics visible",
+        "hint": ""
+      },
+      {
+        "id": "scan",
+        "title": "Lidar /scan",
+        "status": "ok",
+        "detail": "6.0 Hz, frame 'rplidar_link', publisher RELIABLE",
+        "hint": ""
+      },
+      {
+        "id": "clock",
+        "title": "Clock sync",
+        "status": "ok",
+        "detail": "scans arrive 0.27 s after their timestamp",
+        "hint": ""
+      },
+      {
+        "id": "odom",
+        "title": "Odometry /odom",
+        "status": "ok",
+        "detail": "12.6 Hz",
+        "hint": ""
+      },
+      {
+        "id": "tf",
+        "title": "TF tree",
+        "status": "ok",
+        "detail": "odom \u2192 base_link \u2192 rplidar_link",
+        "hint": ""
+      },
+      {
+        "id": "cmd",
+        "title": "Velocity commands",
+        "status": "ok",
+        "detail": "/cmd_vel_unstamped (Twist) is accepted",
+        "hint": ""
+      },
+      {
+        "id": "conflict",
+        "title": "No competing SLAM/Nav2",
+        "status": "ok",
+        "detail": "no map frame, no navigation nodes",
+        "hint": ""
+      },
+      {
+        "id": "state",
+        "title": "Robot state",
+        "status": "ok",
+        "detail": "undocked, battery 37 %",
+        "hint": ""
+      }
+    ],
+    "ok": true,
+    "ts": 1792841263.7152307,
+    "stamper_needed": false
+  },
+  "last_status": {
+    "type": "status",
+    "scan_hz": 8.1,
+    "odom_hz": 20.1,
+    "map_hz": 0.0,
+    "slam_hz": 8.1,
+    "scan_age": 0.0196302160002233,
+    "odom_age": 0.0031911089999994147,
+    "battery": 0.3400000035762787,
+    "docked": false,
+    "nav": "idle",
+    "nav_remaining": null,
+    "robot_action": null,
+    "tracking": false
+  },
+  "maps": []
+}

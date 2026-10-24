@@ -1,0 +1,43 @@
+[INFO] [launch]: All log files can be found below /home/student/.ros/log/2026-10-24-16-57-47-775655-CUC-L2-012-17863
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [hector_mapping_node-1]: process started with pid [17866]
+[INFO] [hector_trajectory_server-2]: process started with pid [17867]
+[INFO] [rviz2-3]: process started with pid [17868]
+[hector_trajectory_server-2] [WARN] [1792841267.915692971] [rcl]: ROS_LOCALHOST_ONLY is deprecated but still honored if it is enabled. Use ROS_AUTOMATIC_DISCOVERY_RANGE and ROS_STATIC_PEERS instead.
+[hector_trajectory_server-2] [WARN] [1792841267.915707750] [rcl]: 'localhost_only' is disabled, 'automatic_discovery_range' and 'static_peers' will be used.
+[hector_mapping_node-1] [WARN] [1792841267.919131645] [rcl]: ROS_LOCALHOST_ONLY is deprecated but still honored if it is enabled. Use ROS_AUTOMATIC_DISCOVERY_RANGE and ROS_STATIC_PEERS instead.
+[hector_mapping_node-1] [WARN] [1792841267.919149798] [rcl]: 'localhost_only' is disabled, 'automatic_discovery_range' and 'static_peers' will be used.
+[hector_trajectory_server-2] [INFO] [1792841267.947277267] [hector_trajectory_server]: Waiting for tf transform data between frames map and base_link to become available
+[hector_mapping_node-1] [INFO] [1792841267.960380780] [hector_mapping]: HectorSM p_base_frame_: base_link
+[hector_mapping_node-1] [INFO] [1792841267.960460425] [hector_mapping]: HectorSM p_map_frame_: map
+[hector_mapping_node-1] [INFO] [1792841267.960467112] [hector_mapping]: HectorSM p_odom_frame_: odom
+[hector_mapping_node-1] [INFO] [1792841267.960470926] [hector_mapping]: HectorSM p_scan_topic_: scan
+[hector_mapping_node-1] [INFO] [1792841267.960473885] [hector_mapping]: HectorSM p_use_tf_scan_transformation_: true
+[hector_mapping_node-1] [INFO] [1792841267.960477308] [hector_mapping]: HectorSM p_pub_map_odom_transform_: true
+[hector_mapping_node-1] [INFO] [1792841267.960482308] [hector_mapping]: HectorSM p_scan_subscriber_queue_size_: 5
+[hector_mapping_node-1] [INFO] [1792841267.960485882] [hector_mapping]: HectorSM p_map_pub_period_: 2.000000
+[hector_mapping_node-1] [INFO] [1792841267.960491152] [hector_mapping]: HectorSM p_update_factor_free_: 0.400000
+[hector_mapping_node-1] [INFO] [1792841267.960495775] [hector_mapping]: HectorSM p_update_factor_occupied_: 0.900000
+[hector_mapping_node-1] [INFO] [1792841267.960499162] [hector_mapping]: HectorSM p_map_update_distance_threshold_: 0.400000
+[hector_mapping_node-1] [INFO] [1792841267.960503082] [hector_mapping]: HectorSM p_map_update_angle_threshold_: 0.060000
+[hector_mapping_node-1] [INFO] [1792841267.960506885] [hector_mapping]: HectorSM p_laser_z_min_value_: -1.000000
+[hector_mapping_node-1] [INFO] [1792841267.960510343] [hector_mapping]: HectorSM p_laser_z_max_value_: 1.000000
+[rviz2-3] [WARN] [1792841268.035611480] [rcl]: ROS_LOCALHOST_ONLY is deprecated but still honored if it is enabled. Use ROS_AUTOMATIC_DISCOVERY_RANGE and ROS_STATIC_PEERS instead.
+[rviz2-3] [WARN] [1792841268.035638921] [rcl]: 'localhost_only' is disabled, 'automatic_discovery_range' and 'static_peers' will be used.
+[hector_mapping_node-1] HectorSM map lvl 0: cellLength: 0.05 res x:512 res y: 512
+[hector_mapping_node-1] HectorSM map lvl 1: cellLength: 0.1 res x:256 res y: 256
+[rviz2-3] [INFO] [1792841276.023149529] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-3] [INFO] [1792841276.023296725] [rviz2]: OpenGl version: 4.6 (GLSL 4.6)
+[rviz2-3] [INFO] [1792841276.039788717] [rviz2]: Stereo is NOT SUPPORTED
+[hector_mapping_node-1] [WARN] [1792841280.601944085] [hector_mapping]: New subscription discovered on topic '/tf', requesting incompatible QoS. No messages will be sent to it. Last incompatible policy: DURABILITY_QOS_POLICY
+[hector_trajectory_server-2] [WARN] [1792841287.949948695] [hector_trajectory_server]: No transform between frames map and base_link available after 20.002668 seconds of waiting.
+[rviz2-3] [INFO] [1792841288.507789312] [rviz2]: Trying to create a map of size 512 x 512 using 1 swatches
+[rviz2-3] [ERROR] [1792841288.539671352] [rviz2]: rviz/glsl120/indexed_8bit_image.vert
+[rviz2-3] rviz/glsl120/indexed_8bit_image.frag
+[rviz2-3]  GLSL link result :
+[rviz2-3] active samplers with a different type refer to the same texture image unit
+[hector_trajectory_server-2] [WARN] [1792841297.951384435] [hector_trajectory_server]: No transform between frames map and base_link available after 30.004108 seconds of waiting.
+[hector_trajectory_server-2] [INFO] [1792841300.951854309] [hector_trajectory_server]: Finished waiting for tf, waited 33.004577 seconds
+[rviz2-3] [INFO] [1792841301.754228551] [rviz2]: Message Filter dropping message: frame 'rplidar_link' at time 1792841300.027 for reason 'discarding message because the queue is full'
+[rviz2-3] [ERROR] [1792841303.423740866] [rviz2]: Lookup would require extrapolation into the future.  Requested time 1792841301.978771 but the latest data is at time 1792841301.928399, when looking up transform from frame [rplidar_link] to frame [map]
+[rviz2-3] [ERROR] [1792841304.033953888] [rviz2]: Lookup would require extrapolation into the future.  Requested time 1792841303.196054 but the latest data is at time 1792841303.195861, when looking up transform from frame [rplidar_link] to frame [map]

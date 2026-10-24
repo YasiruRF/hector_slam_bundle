@@ -1,0 +1,5 @@
+[WARN] [1792841226.187563626] [rcl]: ROS_LOCALHOST_ONLY is deprecated but still honored if it is enabled. Use ROS_AUTOMATIC_DISCOVERY_RANGE and ROS_STATIC_PEERS instead.
+[WARN] [1792841226.187574258] [rcl]: 'localhost_only' is disabled, 'automatic_discovery_range' and 'static_peers' will be used.
+[info] Undocking…
+[ok] Undock succeeded
+trajectory saved: /home/student/tb4_data/results/20261024_165705/trajectory.csv (18.37 m)

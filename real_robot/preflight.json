@@ -1,0 +1,77 @@
+{
+  "steps": [
+    {
+      "id": "settings",
+      "title": "ROS settings",
+      "status": "ok",
+      "detail": "domain 0, rmw_fastrtps_cpp, namespace '(none)'",
+      "hint": ""
+    },
+    {
+      "id": "ping",
+      "title": "Robot reachable",
+      "status": "warn",
+      "detail": "no robot IP set, skipped",
+      "hint": "Enter it in Settings to test the network."
+    },
+    {
+      "id": "dds",
+      "title": "ROS 2 discovery",
+      "status": "ok",
+      "detail": "15 nodes, 81 topics visible",
+      "hint": ""
+    },
+    {
+      "id": "scan",
+      "title": "Lidar /scan",
+      "status": "ok",
+      "detail": "6.0 Hz, frame 'rplidar_link', publisher RELIABLE",
+      "hint": ""
+    },
+    {
+      "id": "clock",
+      "title": "Clock sync",
+      "status": "ok",
+      "detail": "scans arrive 0.27 s after their timestamp",
+      "hint": ""
+    },
+    {
+      "id": "odom",
+      "title": "Odometry /odom",
+      "status": "ok",
+      "detail": "12.6 Hz",
+      "hint": ""
+    },
+    {
+      "id": "tf",
+      "title": "TF tree",
+      "status": "ok",
+      "detail": "odom \u2192 base_link \u2192 rplidar_link",
+      "hint": ""
+    },
+    {
+      "id": "cmd",
+      "title": "Velocity commands",
+      "status": "ok",
+      "detail": "/cmd_vel_unstamped (Twist) is accepted",
+      "hint": ""
+    },
+    {
+      "id": "conflict",
+      "title": "No competing SLAM/Nav2",
+      "status": "ok",
+      "detail": "no map frame, no navigation nodes",
+      "hint": ""
+    },
+    {
+      "id": "state",
+      "title": "Robot state",
+      "status": "ok",
+      "detail": "undocked, battery 37 %",
+      "hint": ""
+    }
+  ],
+  "ok": true,
+  "ts": 1792841263.7152307,
+  "stamper_needed": false
+}
