@@ -78,7 +78,7 @@
   <button id="btnSettings">Settings</button>
   <button id="estop" class="danger" title="Esc">E-STOP</button>
 </header>
-<div id="next"><span>Next: <b id="nextTxt">…</b></span><span class="grow"></span><button id="btnQuick" class="primary" title="Start the simulator (if any), run the checks, undock, start SLAM + Nav2 + RViz">Quick start</button><button id="btnStopAll" class="danger" title="Stop SLAM + Nav2 and the simulator">Stop all</button></div>
+<div id="next"><span>Next: <b id="nextTxt">…</b></span><span class="grow"></span><button id="btnQuick" class="primary" title="Start the simulator (if any), run the checks, undock, then start the run mode chosen in 2 · Run">Quick start</button><button id="btnStopAll" class="danger" title="Stop SLAM + Nav2 and the simulator">Stop all</button></div>
 <div id="alert"></div>
 <div id="toast"></div>
 
@@ -116,15 +116,24 @@
     </section>
     <section>
       <h2>2 · Run</h2>
+      <div class="seg" id="mode" style="display:flex;margin-bottom:8px">
+        <button data-m="map" title="Phase 1: Hector SLAM only. Drive by hand, then Save map.">1 · Map</button>
+        <button data-m="nav" title="Phase 2: Nav2 + AMCL on a map saved in phase 1 (Hector off)">2 · Navigate</button>
+        <button data-m="slam_nav" title="Hector and Nav2 together on the live map (what worked in simulation)">Both</button>
+      </div>
+      <p class="note" id="modeNote" style="margin:0 0 8px"></p>
+      <div class="row" id="mapPick" style="margin-bottom:8px;display:none">
+        <select id="mapSel" class="inline" style="flex:1;min-width:0"></select><button id="btnMaps" title="Refresh the list">↻</button>
+      </div>
       <div class="row">
-        <button id="btnStart" class="primary" disabled>Start SLAM + Nav2</button>
+        <button id="btnStart" class="primary" disabled>Start</button>
         <button id="btnStop" disabled>Stop</button>
       </div>
-      <label class="chk"><input type="checkbox" id="windows"> <span>Open the RViz (Nav2) window <span class="note" id="winNote"></span></span></label>
-      <label class="chk"><input type="checkbox" id="explore"> Autonomous exploration (robot drives itself)</label>
+      <label class="chk"><input type="checkbox" id="windows"> <span>Open the RViz window <span class="note" id="winNote"></span></span></label>
+      <label class="chk" id="exploreRow"><input type="checkbox" id="explore"> Autonomous exploration (robot drives itself)</label>
       <label class="chk"><input type="checkbox" id="force"> Start even if checks failed</label>
       <div class="row" style="margin-top:6px">
-        <span class="badge" id="bSlam">SLAM + Nav2</span><span class="badge" id="bRelay">cmd_vel relay</span><span class="badge" id="bBag">rosbag</span>
+        <span class="badge" id="bSlam">Run</span><span class="badge" id="bRelay">cmd_vel relay</span><span class="badge" id="bBag">rosbag</span>
       </div>
     </section>
     <section>
@@ -149,6 +158,7 @@
       <div id="mapwrap"><canvas id="cv" width="900" height="720"></canvas></div>
       <div class="row" style="margin-top:8px">
         <button id="btnGoal">Send goal: off</button>
+        <button id="btnPose" title="Phase 2: tell AMCL where the robot really is (like RViz 2D Pose Estimate)">Set pose: off</button>
         <button id="btnCancel">Cancel goal</button>
         <span class="note" id="goalHelp">Turn on, then click and drag on the map (drag sets the heading).</span>
       </div>
@@ -216,9 +226,16 @@
 
 <script>
 const $ = s => document.querySelector(s);
-const state = { simState: 'stopped', running: {}, settings: {}, pose: null, scan: null, map: null, mapImg: null, bbox: null, goalMode: false, goal: null, drag: null,
-                preflight: { ok: false, ts: 0 }, status: {}, tab: 'slam', logs: {}, recorder: null };
-const TABS = { slam: 'SLAM + Nav2', relay: 'Relay', helper: 'ROS helper', sim: 'Simulation', sim_robot: 'Sim robot', bag: 'Rosbag', map_saver: 'Map saver' };
+const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
+const state = { simState: 'stopped', running: {}, settings: {}, pose: null, scan: null, map: null, mapImg: null, bbox: null, clickMode: null, goal: null, drag: null,
+                preflight: { ok: false, ts: 0 }, status: {}, tab: 'slam', logs: {}, recorder: null,
+                mode: store.get('runMode') || 'map', runMode: 'map', runMap: null, maps: [], mapSaved: false };
+const MODES = { map: 'Hector mapping', nav: 'Nav2 on saved map', slam_nav: 'SLAM + Nav2' };
+const MODE_NOTES = {
+  map: 'Phase 1: Hector SLAM only. Drive slowly by hand (Drive panel), come back to the start, then Save map.',
+  nav: 'Phase 2: stop phase 1 first. Nav2 + AMCL on the chosen map. Start from where mapping started (Quick start undocks to the same spot).',
+  slam_nav: 'Hector and Nav2 together on the live map (works in simulation; on the real robot use 1 then 2).' };
+const TABS = { slam: 'Run', relay: 'Relay', helper: 'ROS helper', sim: 'Simulation', sim_robot: 'Sim robot', bag: 'Rosbag', map_saver: 'Map saver' };
 
 // ---------- websocket ----------
 let ws;
@@ -239,7 +256,7 @@ function handle(m) {
   switch (m.type) {
     case 'settings': state.settings = m.settings; renderTarget(); renderWindows(); $('#speed').max = m.settings.max_lin; if (+$('#speed').value > m.settings.max_lin) $('#speed').value = m.settings.max_lin; $('#speedv').textContent = (+$('#speed').value).toFixed(2) + ' m/s'; break;
     case 'toast': toast(m.text, m.level); break;
-    case 'procs': state.running = m.running; state.simState = m.sim_state; state.gui = m.gui_available; renderWindows(); $('#session').textContent = 'session ' + m.session; renderRun(); break;
+    case 'procs': state.running = m.running; state.simState = m.sim_state; state.gui = m.gui_available; state.runMode = m.run_mode; state.runMap = m.run_map; renderWindows(); $('#session').textContent = 'session ' + m.session; renderRun(); break;
     case 'status': state.status = m; renderStatus(); break;
     case 'pose': state.pose = m; break;
     case 'scan': state.scan = m; break;
@@ -266,26 +283,44 @@ function addStep(s) {
 function renderRun() {
   const r = state.running, fresh = Date.now() / 1000 - state.preflight.ts < 600;
   const gate = (state.preflight.ok && fresh) || $('#force').checked;
-  $('#btnStart').disabled = r.slam || !gate;
+  const mode = r.slam ? state.runMode : state.mode, nav = r.slam && state.runMode !== 'map';
+  document.querySelectorAll('#mode button').forEach(b => { b.classList.toggle('sel', b.dataset.m === mode); b.disabled = !!r.slam; });
+  $('#modeNote').textContent = MODE_NOTES[mode];
+  $('#mapPick').style.display = mode === 'nav' ? '' : 'none'; $('#mapSel').disabled = !!r.slam;
+  $('#exploreRow').style.display = mode === 'slam_nav' ? '' : 'none';
+  $('#btnStart').textContent = 'Start ' + MODES[mode];
+  $('#btnStart').disabled = r.slam || !gate || (mode === 'nav' && !$('#mapSel').value);
   $('#btnStop').disabled = !r.slam;
+  $('#bSlam').textContent = r.slam ? MODES[state.runMode] + (state.runMap ? ' · ' + state.runMap : '') : 'not running';
   for (const [id, k] of [['bSlam', 'slam'], ['bRelay', 'relay'], ['bBag', 'bag']]) $('#' + id).classList.toggle('on', !!r[k]);
   $('#btnBag').textContent = r.bag ? 'Stop rosbag' : 'Record rosbag';
-  $('#btnGoal').disabled = !r.slam; $('#btnHome').disabled = !r.slam;
+  $('#btnGoal').disabled = !nav; $('#btnHome').disabled = !nav; $('#btnPose').disabled = !(r.slam && state.runMode === 'nav');
   $('#bSim').textContent = state.simState; $('#bSim').classList.toggle('on', state.simState === 'ready');
   $('#btnSimStart').disabled = state.simState !== 'stopped'; $('#btnSimStop').disabled = state.simState === 'stopped';
   $('#simWorld').disabled = $('#simModel').disabled = state.simState !== 'stopped';
   renderNext();
-  if (!r.slam && state.goalMode) toggleGoal();
+  if (state.clickMode && $('#' + (state.clickMode === 'goal' ? 'btnGoal' : 'btnPose')).disabled) setClickMode(null);
   $('#checkAge').textContent = state.preflight.ts ? (state.preflight.ok ? 'passed' : 'failed') + ' · ' + Math.round(Date.now() / 1000 - state.preflight.ts) + ' s ago' : '';
 }
 setInterval(renderRun, 5000);
 $('#force').onchange = renderRun;
 $('#btnCheck').onclick = () => api('preflight').catch(e => showAlert(e.message));
+const startBody = () => ({ mode: state.mode, map: $('#mapSel').value, explore: state.mode === 'slam_nav' && $('#explore').checked });
 $('#btnStart').onclick = async () => {
-  const explore = $('#explore').checked;
-  if (explore && !confirm('The robot will drive by itself. Is the area clear and is someone ready to press E-STOP (Esc)?')) return;
-  try { const j = await api('start', { explore, force: $('#force').checked }); if (j.result !== 'started') showAlert(j.result); } catch (e) { showAlert(e.message); }
+  const b = startBody();
+  if (b.explore && !confirm('The robot will drive by itself. Is the area clear and is someone ready to press E-STOP (Esc)?')) return;
+  try { const j = await api('start', { ...b, force: $('#force').checked }); if (j.result !== 'started') showAlert(j.result); else if (b.mode === 'map') state.mapSaved = false; } catch (e) { showAlert(e.message); }
 };
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => { state.mode = b.dataset.m; store.set('runMode', state.mode); if (state.mode === 'nav') loadMaps(); renderRun(); });
+function showMaps(maps) {
+  const keep = $('#mapSel').value; state.maps = maps;
+  $('#mapSel').innerHTML = maps.length ? maps.map(m => `<option value="${m.path}">${m.label} · ${m.time}</option>`).join('') : '<option value="">no saved maps yet: do phase 1 + Save map</option>';
+  if (maps.some(m => m.path === keep)) $('#mapSel').value = keep;
+  renderRun();
+}
+const loadMaps = () => api('maps').then(j => showMaps(j.maps)).catch(e => showAlert(e.message));
+$('#btnMaps').onclick = loadMaps;
+$('#mapSel').onchange = renderRun;
 $('#btnStop').onclick = () => api('stop').catch(e => showAlert(e.message));
 $('#estop').onclick = () => send({ cmd: 'estop' });
 function showAlert(t) { const a = $('#alert'); a.textContent = t + '  (click to dismiss)'; a.style.display = 'block'; }
@@ -331,7 +366,7 @@ const i2w = (ix, iy) => [ix * state.map.res + state.map.ox, (state.map.h - iy) *
 function toScreen(v, x, y) { const [ix, iy] = w2i(x, y); return [(ix - v.x0) * v.s, (iy - v.y0) * v.s]; }
 function draw() {
   cx.fillStyle = '#0b0d10'; cx.fillRect(0, 0, cv.width, cv.height);
-  if (!state.map || !state.mapImg) { cx.fillStyle = '#8d97a6'; cx.font = '18px system-ui'; cx.textAlign = 'center'; cx.fillText('No map yet. Start SLAM + Nav2 and drive a little.', cv.width / 2, cv.height / 2); requestAnimationFrame(draw); return; }
+  if (!state.map || !state.mapImg) { cx.fillStyle = '#8d97a6'; cx.font = '18px system-ui'; cx.textAlign = 'center'; cx.fillText(state.running.slam ? 'Waiting for the map…' : 'No map yet. Start phase 1 (Map) and drive a little.', cv.width / 2, cv.height / 2); requestAnimationFrame(draw); return; }
   const v = view(); cx.imageSmoothingEnabled = false;
   cx.drawImage(state.mapImg, -v.x0 * v.s, -v.y0 * v.s, state.map.w * v.s, state.map.h * v.s);
   const p = state.pose && state.pose.map;
@@ -342,6 +377,7 @@ function draw() {
   const arrow = (x, y, yaw, col, size) => { const [sx, sy] = toScreen(v, x, y); cx.save(); cx.translate(sx, sy); cx.rotate(-yaw); cx.fillStyle = col; cx.strokeStyle = '#fff'; cx.lineWidth = 2;
     cx.beginPath(); cx.moveTo(size, 0); cx.lineTo(-size * .7, size * .7); cx.lineTo(-size * .4, 0); cx.lineTo(-size * .7, -size * .7); cx.closePath(); cx.fill(); cx.stroke(); cx.restore(); };
   if (state.goal) arrow(state.goal.x, state.goal.y, state.goal.yaw, '#f5b942', 12);
+  if (state.drag && state.drag.kind === 'pose') arrow(state.drag.x, state.drag.y, state.drag.yaw, '#3ecf8e', 13);
   if (p) { arrow(p[0], p[1], p[2], '#4c9bff', 13); $('#hPose').textContent = `${p[0].toFixed(2)}, ${p[1].toFixed(2)} m · ${(p[2] * 57.3).toFixed(0)}°`; }
   else $('#hPose').textContent = 'no map→base_link';
   const scale = 1 / state.map.res * v.s;   // 1 m scale bar
@@ -354,11 +390,18 @@ draw();
 // goal by click-drag
 function evPos(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; }
 function evWorld(e) { const [px, py] = evPos(e), v = view(); return i2w(px / v.s + v.x0, py / v.s + v.y0); }
-cv.onpointerdown = e => { if (!state.goalMode || !state.map) return; const [x, y] = evWorld(e); state.drag = { x, y }; state.goal = { x, y, yaw: 0 }; cv.setPointerCapture(e.pointerId); };
-cv.onpointermove = e => { if (!state.drag) return; const [x, y] = evWorld(e); if (Math.hypot(x - state.drag.x, y - state.drag.y) > 0.08) state.goal.yaw = Math.atan2(y - state.drag.y, x - state.drag.x); };
-cv.onpointerup = e => { if (!state.drag) return; send({ cmd: 'goal', ...state.goal }); state.drag = null; toggleGoal(); };
-function toggleGoal() { state.goalMode = !state.goalMode; $('#btnGoal').textContent = 'Send goal: ' + (state.goalMode ? 'ON' : 'off'); $('#btnGoal').classList.toggle('primary', state.goalMode); cv.style.cursor = state.goalMode ? 'crosshair' : 'default'; }
-$('#btnGoal').onclick = toggleGoal;
+// goal / initial pose by click-drag (drag sets the heading)
+cv.onpointerdown = e => { if (!state.clickMode || !state.map) return; const [x, y] = evWorld(e); state.drag = { x, y, yaw: 0, kind: state.clickMode }; if (state.clickMode === 'goal') state.goal = state.drag; cv.setPointerCapture(e.pointerId); };
+cv.onpointermove = e => { if (!state.drag) return; const [x, y] = evWorld(e); if (Math.hypot(x - state.drag.x, y - state.drag.y) > 0.08) state.drag.yaw = Math.atan2(y - state.drag.y, x - state.drag.x); };
+cv.onpointerup = e => { const d = state.drag; if (!d) return; send({ cmd: d.kind === 'goal' ? 'goal' : 'initpose', x: d.x, y: d.y, yaw: d.yaw }); state.drag = null; setClickMode(null); };
+function setClickMode(m) {
+  state.clickMode = m;
+  $('#btnGoal').textContent = 'Send goal: ' + (m === 'goal' ? 'ON' : 'off'); $('#btnGoal').classList.toggle('primary', m === 'goal');
+  $('#btnPose').textContent = 'Set pose: ' + (m === 'pose' ? 'ON' : 'off'); $('#btnPose').classList.toggle('primary', m === 'pose');
+  cv.style.cursor = m ? 'crosshair' : 'default';
+}
+$('#btnGoal').onclick = () => setClickMode(state.clickMode === 'goal' ? null : 'goal');
+$('#btnPose').onclick = () => setClickMode(state.clickMode === 'pose' ? null : 'pose');
 $('#btnCancel').onclick = () => { send({ cmd: 'cancel' }); state.goal = null; };
 
 // ---------- teleop ----------
@@ -367,7 +410,8 @@ $('#speed').oninput = () => $('#speedv').textContent = (+$('#speed').value).toFi
 function setVel(lin, ang) {
   clearInterval(velTimer);
   if (lin === 0 && ang === 0) { send({ cmd: 'vel', lin: 0, ang: 0 }); return; }
-  const sp = +$('#speed').value, push = () => send({ cmd: 'vel', lin: lin * sp, ang: ang * Math.min(sp * 4, state.settings.max_ang || 0.8) });
+  // turn rate follows the speed slider: 0.1 m/s -> 0.3 rad/s (Hector loses track on fast turns)
+  const sp = +$('#speed').value, push = () => send({ cmd: 'vel', lin: lin * sp, ang: ang * Math.min(sp * 3, state.settings.max_ang || 0.8) });
   push(); velTimer = setInterval(push, 100);
 }
 document.querySelectorAll('.pad button').forEach(b => {
@@ -400,7 +444,16 @@ renderTabs();
 
 // ---------- evidence ----------
 const note = t => $('#evNote').textContent = t;
-$('#btnSaveMap').onclick = async () => { note('Saving map…'); try { const j = await api('save_map', { name: $('#mapname').value }); note(j.ok ? 'Map saved in ' + j.dir : 'Map save failed: see the Map saver log.'); state.tab = 'map_saver'; renderTabs(); showLog(); } catch (e) { note(e.message); } };
+$('#btnSaveMap').onclick = async () => {
+  note('Saving map…');
+  try {
+    const j = await api('save_map', { name: $('#mapname').value });
+    showMaps(j.maps); if (j.ok && j.maps.length) { $('#mapSel').value = j.maps[0].path; renderRun(); }
+    note(j.ok ? 'Map saved in ' + j.dir + (state.runMode === 'map' ? '. It is selected for phase 2 (2 · Navigate).' : '') : 'Map save failed: see the Map saver log.');
+    if (j.ok && state.runMode === 'map') { state.mapSaved = true; renderNext(); }
+    state.tab = 'map_saver'; renderTabs(); showLog();
+  } catch (e) { note(e.message); }
+};
 $('#btnShot').onclick = () => cv.toBlob(async b => { const r = await fetch('/api/upload/screenshot', { method: 'POST', body: b }); note('Screenshot saved: ' + (await r.json()).saved); });
 $('#btnVideo').onclick = () => {
   if (state.recorder) { state.recorder.stop(); return; }
@@ -469,8 +522,14 @@ function nextStep() {
   if (!state.preflight.ok) return 'Fix the failed checks above, then re-run them.';
   if (st.docked) return 'Undock the robot.';
   if (!fresh && !r.slam) return 'Re-run the checks (they expire after 10 minutes).';
-  if (!r.slam) return 'Start SLAM + Nav2.';
+  if (!r.slam && state.mode === 'nav' && !$('#mapSel').value) return 'No saved map: do phase 1 (1 · Map) and press Save map first.';
+  if (!r.slam && state.mode === 'nav') return 'Robot at the mapping start spot? Then Start Nav2 on saved map (Quick start undocks first).';
+  if (!r.slam && state.mode === 'map' && state.mapSaved) return 'Map saved. Dock the robot (or drive it back to the start), choose 2 · Navigate, then Quick start.';
+  if (!r.slam) return `Start ${MODES[state.mode]}.`;
+  if (state.runMode === 'map' && state.mapSaved) return 'Map saved. Press Stop, dock the robot (or drive it back to the start), then choose 2 · Navigate.';
+  if (state.runMode === 'map') return 'Drive slowly around the room (slider ≤ 0.1 m/s, pause after turns), return to the start, then Save map.';
   if (st.nav === 'navigating') return 'Robot is navigating to the goal.';
+  if (state.runMode === 'nav') return 'Check the red scan dots sit on the walls (if not: Set pose), then Send goal. Save screenshots / video.';
   return 'Drive or send goals; save the map and evidence when done.';
 }
 function renderWindows() {
@@ -489,7 +548,7 @@ $('#btnQuick').onclick = async () => {
   if (quickBusy) return; quickBusy = true; $('#btnQuick').disabled = true;
   try {
     const gz = state.settings.target !== 'real';
-    if (state.running.slam) throw new Error('SLAM + Nav2 is already running');
+    if (state.running.slam) throw new Error(MODES[state.runMode] + ' is already running: Stop it first');
     if (gz && state.simState === 'stopped') { toast('Starting the simulator…'); const j = await api('sim/start'); if (!j.result.startsWith('started')) throw new Error(j.result); await wait(4000); }
     toast('Running connection checks…'); const c1 = await api('preflight'); if (!c1.ok) throw new Error('Connection checks failed: see the list on the left.');
     if (state.status.docked && state.settings.target !== 'webots') {
@@ -498,14 +557,17 @@ $('#btnQuick').onclick = async () => {
       toast('Undocked', 'ok'); await wait(1500);
       const c2 = await api('preflight'); if (!c2.ok) throw new Error('Checks failed after undocking.');
     }
-    const explore = $('#explore').checked;
-    if (explore && !confirm('Quick start will begin AUTONOMOUS exploration: the robot drives itself. Area clear and someone ready at E-STOP?')) throw new Error('Cancelled');
-    const j = await api('start', { explore, force: false }); if (j.result !== 'started') throw new Error(j.result);
-    toast('SLAM + Nav2 started', 'ok');
+    const b = startBody();
+    if (b.mode === 'nav' && !b.map) throw new Error('No saved map selected: do phase 1 and Save map first.');
+    if (b.explore && !confirm('Quick start will begin AUTONOMOUS exploration: the robot drives itself. Area clear and someone ready at E-STOP?')) throw new Error('Cancelled');
+    const j = await api('start', { ...b, force: false }); if (j.result !== 'started') throw new Error(j.result);
+    if (b.mode === 'map') state.mapSaved = false;
+    toast(MODES[b.mode] + ' started', 'ok');
   } catch (e) { toast(e.message, 'error'); } finally { quickBusy = false; $('#btnQuick').disabled = false; }
 };
 
 connect();
+loadMaps();
 </script>
 </body>
 </html>

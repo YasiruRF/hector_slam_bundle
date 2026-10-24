@@ -10,7 +10,7 @@ Out (stdout, one JSON object per line):
   map      PNG (base64) + geometry + cell stats, when /map changes (max 0.5 Hz)
   nav      NavigateToPose state changes
   probe_result, traj_done
-In (stdin): vel, goal, cancel, estop, probe, traj_start, traj_stop.
+In (stdin): vel, goal, initpose, cancel, estop, probe, traj_start, traj_stop.
 Everything else the dashboard needs (launching, logs) is done by server.py.
 """
 import argparse
@@ -27,7 +27,7 @@ from collections import deque
 
 import numpy as np
 import rclpy
-from geometry_msgs.msg import PoseStamped, Twist, TwistStamped
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Twist, TwistStamped
 from nav2_msgs.action import NavigateToPose
 from nav_msgs.msg import OccupancyGrid, Odometry
 from rclpy.action import ActionClient
@@ -132,6 +132,7 @@ class Helper(Node):
             self.create_subscription(DockStatus, f'{ns}/dock_status', self.on_dock,
                                      qos_profile_sensor_data)
         self.nav = ActionClient(self, NavigateToPose, f'{ns}/navigate_to_pose')
+        self.initpose_pub = self.create_publisher(PoseWithCovarianceStamped, f'{ns}/initialpose', 10)
         self.dock_clients = {}
         if Dock:
             self.dock_clients = {'dock': ActionClient(self, Dock, f'{ns}/dock'),
@@ -277,6 +278,20 @@ class Helper(Node):
         self.nav_state = 'sending'
         fut = self.nav.send_goal_async(g, feedback_callback=self.on_feedback)
         fut.add_done_callback(self.on_goal_response)
+
+    def set_initial_pose(self, x, y, yaw):
+        """AMCL (phase 2) re-localises around this pose, like RViz's 2D Pose Estimate."""
+        if self.count_subscribers(f'{self.ns}/initialpose') == 0:
+            return self.toast('Nothing listens on initialpose: is phase 2 (Nav2 on saved map) running?', 'warn')
+        m = PoseWithCovarianceStamped()
+        m.header.frame_id = 'map'
+        m.header.stamp = self.get_clock().now().to_msg()
+        m.pose.pose.position.x, m.pose.pose.position.y = float(x), float(y)
+        m.pose.pose.orientation.z, m.pose.pose.orientation.w = math.sin(yaw / 2), math.cos(yaw / 2)
+        m.pose.covariance[0] = m.pose.covariance[7] = 0.25     # 0.5 m std dev in x, y
+        m.pose.covariance[35] = 0.07                           # ~15 deg std dev in yaw
+        self.initpose_pub.publish(m)
+        self.toast(f'Pose set to ({x:.2f}, {y:.2f}): drive a little so AMCL settles', 'ok')
 
     def on_goal_response(self, fut):
         gh = fut.result()
@@ -426,6 +441,8 @@ def main():
                 node.publish_vel(c['lin'], c['ang'], c.get('mode', 'auto'))
             elif cmd == 'goal':
                 node.send_goal(c['x'], c['y'], c.get('yaw', 0.0))
+            elif cmd == 'initpose':
+                node.set_initial_pose(c['x'], c['y'], c.get('yaw', 0.0))
             elif cmd == 'cancel':
                 node.cancel_goal()
             elif cmd in ('undock', 'dock'):

@@ -17,6 +17,17 @@ while Hector on its own mapped fine. So, as the lecturer suggested:
 Never run both at once: they would fight over `/map` and `map → odom`.
 This is still "SLAM + Nav2 integration": Nav2 navigates on the map Hector built.
 
+## Fastest: the dashboard (`./native/run.sh`, then http://localhost:8080)
+
+1. **2 · Run → 1 · Map**, then **Quick start**. It runs the checks, undocks, and starts Hector only.
+2. Drive with the Drive pad at a slow speed (the slider sets the turn rate too). Come back to the start, then click **Save map**.
+3. **Stop**, then **Dock** (or drive back to the start spot).
+4. **2 · Run → 2 · Navigate**. The map you just saved is pre-selected. Then **Quick start**. It undocks to the same spot and starts Nav2 + AMCL.
+5. If the red scan dots don't sit on the walls, use **Set pose** (click and drag on the map). Then use **Send goal**.
+6. Evidence panel: Screenshot / Record video / Record rosbag / Export results.
+
+The terminal way below does the same thing.
+
 ## 0. Every terminal on the laptop
 
 Use plain terminals, not the dashboard (the dashboard's ROS settings were the

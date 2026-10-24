@@ -6,7 +6,8 @@
 Process manager + HTTP/WebSocket front for the browser UI (static/index.html):
   - robot link settings (domain, RMW, namespace, ...) saved in DATA_DIR/settings.json
   - the connection-check pipeline (gates Start)
-  - the SLAM + Nav2 launch, the cmd_vel relay and rosbag as managed processes with live logs
+  - the run (phase 1: Hector mapping; phase 2: Nav2 + AMCL on a saved map; or both together),
+    the cmd_vel relay and rosbag as managed processes with live logs
   - ros_helper.py (rclpy) for live map/pose/scan, teleop, goals and e-stop
   - evidence: saved map, screenshots, video, rosbag, trajectory, zipped results
 """
@@ -38,6 +39,9 @@ DEFAULTS = {
     'sim_render': 'software',      # software = CPU rendering (correct lidar, slower); auto = GPU if /dev/dri exists (lidar is broken on the GPU path tested)
 }
 WORLDS = {'gazebo': ('maze', 'warehouse', 'depot'), 'webots': ('hector_slam_test',)}
+# Run modes. Hector and Nav2 in one launch gave an empty map on the real robot, so the
+# recommended flow is 'map' (Hector only, drive by hand, save the map), then 'nav'.
+MODES = {'map': 'Hector mapping', 'nav': 'Nav2 on saved map', 'slam_nav': 'SLAM + Nav2'}
 RMWS = ('rmw_fastrtps_cpp', 'rmw_cyclonedds_cpp')
 
 
@@ -119,6 +123,8 @@ class App:
         self.slam_alerted = False
         self.slam_started = None          # monotonic time of Start; None while stopped or stopping
         self.slam_explore = False
+        self.run_mode = 'map'             # mode of the current / last run (see MODES)
+        self.run_map = None               # saved map .yaml used by 'nav'
         self.nav_active = False           # lifecycle manager said "Managed nodes are active"
         self.nav_watch = False            # still waiting to see Nav2 come up after Start
         self.slam_retries = 0
@@ -183,7 +189,8 @@ class App:
 
     def procs_msg(self):
         return {'type': 'procs', 'running': {n: p.running for n, p in self.procs.items()},
-                'session': self.session, 'sim_state': self.sim_state, 'gui_available': self.gui_available}
+                'session': self.session, 'sim_state': self.sim_state, 'gui_available': self.gui_available,
+                'run_mode': self.run_mode, 'run_map': self.run_map and self.map_label(Path(self.run_map))}
 
     # ---- helper (rclpy) ----
     async def start_helper(self):
@@ -229,7 +236,7 @@ class App:
             self.alerted = False
 
         # Scans arrive but Hector processes none: the map stays empty. Say why instead of showing nothing.
-        silent = (self.procs['slam'].running and self.slam_started is not None
+        silent = (self.procs['slam'].running and self.run_mode != 'nav' and self.slam_started is not None
                   and time.monotonic() - self.slam_started > 20
                   and st.get('scan_hz', 0) > 1 and st.get('slam_hz', 0) == 0)
         if silent and not self.slam_alerted:
@@ -250,16 +257,16 @@ class App:
             if self.slam_retries < 2:
                 self.slam_retries += 1
                 await self.broadcast({'type': 'alert', 'text': 'Nav2 did not come up within 60 s (a DDS startup '
-                                      f'race in Jazzy): restarting SLAM + Nav2 automatically (attempt {self.slam_retries} '
-                                      'of 2). The map starts again.'})
+                                      f'race in Jazzy): restarting {MODES[self.run_mode]} automatically (attempt '
+                                      f'{self.slam_retries} of 2).' + (' The map starts again.' if self.run_mode == 'slam_nav' else '')})
                 asyncio.create_task(self.restart_slam())
             else:
                 await self.broadcast({'type': 'alert', 'text': 'Nav2 still did not come up after 2 restarts. Press Stop, '
-                                      'check the "slam" log, then Start again.'})
+                                      'check the "Run" log, then Start again.'})
 
     async def restart_slam(self):
         await self.stop_slam()
-        await self.start_slam(self.slam_explore, True, retry=True)
+        await self.start_slam(self.slam_explore, True, retry=True, mode=self.run_mode, map_yaml=self.run_map)
 
     async def probe(self):
         self.probe_id += 1
@@ -406,9 +413,16 @@ class App:
         (self.session_dir / 'preflight.json').write_text(json.dumps(self.preflight, indent=2))
 
     # ---- run control ----
-    async def start_slam(self, explore, force, retry=False):
+    async def start_slam(self, explore, force, retry=False, mode='slam_nav', map_yaml=None):
         if self.procs['slam'].running:
-            return 'already running'
+            return f'{MODES[self.run_mode]} is already running: Stop it first.'
+        if mode not in MODES:
+            return f'unknown mode {mode!r}'
+        if mode == 'nav':
+            p = Path(map_yaml or '').resolve()
+            if p.suffix != '.yaml' or not p.is_file() or not p.is_relative_to(DATA.resolve()):
+                return 'Choose a saved map first (save one in phase 1 with "Save map").'
+            map_yaml = str(p)
         age = time.time() - self.preflight['ts']
         if not force and (not self.preflight['ok'] or age > 600):
             return 'Run the connection checks first (they must pass and be < 10 min old).'
@@ -418,14 +432,20 @@ class App:
                 ns = self.ns
                 await self.procs['relay'].start(['ros2', 'run', 'tb4_hector_slam', 'cmd_vel_stamper.py',
                                                  '--in', f'{ns}/cmd_vel_unstamped', '--out', f'{ns}/cmd_vel'])
-        argv = ['ros2', 'launch', 'tb4_hector_slam', 'slam_nav_launch.py',
-                f"use_sim_time:={'true' if self.sim else 'false'}",
-                f"explore:={'true' if explore else 'false'}", f"use_rviz:={'true' if self.windows else 'false'}"]
+        explore = explore and mode == 'slam_nav'
+        launch = {'map': 'hector_slam_launch.py', 'nav': 'nav_on_map_launch.py', 'slam_nav': 'slam_nav_launch.py'}[mode]
+        argv = ['ros2', 'launch', 'tb4_hector_slam', launch,
+                f"use_sim_time:={'true' if self.sim else 'false'}", f"use_rviz:={'true' if self.windows else 'false'}"]
+        if mode == 'slam_nav':
+            argv.append(f"explore:={'true' if explore else 'false'}")
+        if mode == 'nav':
+            argv.append('map:=' + map_yaml)
         if self.ns:
             argv.append('namespace:=' + self.ns)
         if not retry:
             self.slam_retries = 0
-        self.slam_explore, self.nav_active, self.nav_watch = explore, False, True
+        self.run_mode, self.run_map = mode, map_yaml if mode == 'nav' else None
+        self.slam_explore, self.nav_active, self.nav_watch = explore, False, mode != 'map'
         self.slam_started = time.monotonic()
         await self.procs['slam'].start(argv, on_line=self.on_slam_line)
         self.procs['helper'].write({'cmd': 'traj_start', 'path': str(self.fresh_path('trajectory', '.csv'))})
@@ -434,8 +454,8 @@ class App:
     def on_slam_line(self, line):
         """Failures that otherwise only show up deep in the slam log."""
         text = None
-        if 'Managed nodes are active' in line:
-            self.nav_active = True
+        if 'Managed nodes are active' in line and 'lifecycle_manager_navigation' in line:
+            self.nav_active = True        # (in 'nav' mode lifecycle_manager_localization reports too)
         elif 'Aborting bringup' in line:
             text = ('Nav2 failed to start ("Aborting bringup"): goals will be rejected. '
                     'The lines just before it in the "slam" log name the node and the reason.')
@@ -560,6 +580,18 @@ class App:
             await p.stop(2)
         return (self.session_dir / f'{name}.yaml').exists()
 
+    @staticmethod
+    def map_label(p):
+        return f'{p.parent.name}/{p.stem}'
+
+    def saved_maps(self):
+        """Maps for phase 2, newest first: dashboard sessions (results/*/) and run.sh savemap (maps/)."""
+        found = [p for p in list(DATA.glob('results/*/*.yaml')) + list(DATA.glob('maps/*.yaml'))
+                 if p.with_suffix('.pgm').exists()]
+        found.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        return [{'path': str(p), 'label': self.map_label(p),
+                 'time': time.strftime('%d %b %H:%M', time.localtime(p.stat().st_mtime))} for p in found[:40]]
+
     def map_stats(self, yaml_path):
         meta = {}
         for line in yaml_path.read_text().splitlines():
@@ -633,7 +665,7 @@ async def ws_handler(request):
             ang = max(-s['max_ang'], min(s['max_ang'], float(c['ang'])))
             st.procs['helper'].write({'cmd': 'vel', 'lin': lin, 'ang': ang,
                                       'mode': 'stamped' if s['cmd_vel_mode'] == 'stamped' else 'auto'})
-        elif c.get('cmd') in ('goal', 'cancel', 'undock', 'dock', 'lidar_start', 'lidar_stop', 'goto_start'):
+        elif c.get('cmd') in ('goal', 'initpose', 'cancel', 'undock', 'dock', 'lidar_start', 'lidar_stop', 'goto_start'):
             st.procs['helper'].write(c)
         elif c.get('cmd') == 'estop':
             await st.estop()
@@ -689,7 +721,13 @@ async def api_preflight(request):
 @jr
 async def api_start(request):
     b = await request.json()
-    return {'result': await app_state.start_slam(bool(b.get('explore')), bool(b.get('force')))}
+    return {'result': await app_state.start_slam(bool(b.get('explore')), bool(b.get('force')),
+                                                 mode=b.get('mode', 'slam_nav'), map_yaml=b.get('map'))}
+
+
+@jr
+async def api_maps(request):
+    return {'maps': app_state.saved_maps()}
 
 
 @jr
@@ -715,7 +753,8 @@ async def api_estop(request):
 @jr
 async def api_save_map(request):
     b = await request.json()
-    return {'ok': await app_state.save_map(b.get('name', 'map')), 'dir': str(app_state.session_dir)}
+    ok = await app_state.save_map(b.get('name', 'map'))
+    return {'ok': ok, 'dir': str(app_state.session_dir), 'maps': app_state.saved_maps()}
 
 
 @jr
@@ -772,7 +811,7 @@ def main():
         web.post('/api/start', api_start), web.post('/api/stop', api_stop), web.post('/api/sim/{action}', api_sim), web.post('/api/estop', api_estop),
         web.post('/api/save_map', api_save_map), web.post('/api/upload/{kind}', api_upload),
         web.post('/api/bag/{action}', api_bag), web.post('/api/export', api_export),
-        web.post('/api/new_session', api_new_session),
+        web.post('/api/new_session', api_new_session), web.post('/api/maps', api_maps),
         web.static('/results', DATA / 'results'),
     ])
     app.on_startup.append(on_start)
