@@ -97,6 +97,7 @@ class Helper(Node):
         self.rates = {k: Rate() for k in ('scan', 'odom', 'map')}
         self.scan_frame = None
         self.scan_msg = None
+        self.scan_delay = deque(maxlen=30)   # this computer's clock minus scan stamp: latency + clock offset
         self.map_msg = None
         self.map_sent = None
         self.map_stamp = 0.0
@@ -147,6 +148,9 @@ class Helper(Node):
         self.rates['scan'].tick()
         self.scan_frame = m.header.frame_id
         self.scan_msg = m
+        now = self.get_clock().now()
+        stamp = Time.from_msg(m.header.stamp, clock_type=now.clock_type)
+        self.scan_delay.append((now - stamp).nanoseconds * 1e-9)
 
     def on_map(self, m):
         self.rates['map'].tick()
@@ -173,7 +177,8 @@ class Helper(Node):
             t = self.tf.get_latest_common_time(target, source)
         except Exception:
             return False
-        return (self.get_clock().now() - t).nanoseconds * 1e-9 < max_age
+        now = self.get_clock().now()   # tf2 hands back a Time of another clock type; rclpy refuses to mix them
+        return (now - Time(nanoseconds=t.nanoseconds, clock_type=now.clock_type)).nanoseconds * 1e-9 < max_age
 
     def tick_pose(self):
         mp = self.lookup('map', 'base_link')
@@ -379,6 +384,7 @@ class Helper(Node):
               'nodes': nodes, 'n_topics': len(topics),
               'scan_hz': round(self.rates['scan'].hz(), 1), 'scan_frame': scan_frame,
               'scan_qos': qos_of(f'{ns}/scan'), 'odom_hz': round(self.rates['odom'].hz(), 1),
+              'scan_delay': round(float(np.median(list(self.scan_delay))), 2) if self.scan_delay else None,
               'odom_base': self.lookup('odom', 'base_link') is not None,
               'scan_tf': bool(scan_frame) and self.tf.can_transform('base_link', scan_frame, Time()),
               'map_odom': self.tf_fresh('map', 'odom'),

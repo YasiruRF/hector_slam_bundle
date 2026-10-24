@@ -28,6 +28,20 @@ The dashboard runs a connection-check pipeline against the robot (network, ROS 2
 
 ![dashboard](turtlebot_hector_slam/docs/images/dashboard.png)
 
+## Run natively (no Docker)
+
+On a computer with ROS 2 Jazzy installed in `/opt/ros/jazzy` (the laptop that drives the real robot):
+
+```bash
+native/setup.sh            # once: apt packages + build (into ~/tb4_ws, or the workspace this repo sits in)
+native/run.sh              # dashboard, http://localhost:8080
+native/run.sh preflight    # robot checks in the terminal
+native/run.sh launch explore:=true use_rviz:=true   # SLAM + Nav2 without the dashboard
+```
+
+In the `jazzy` dev container the same scripts work: `jazzy ./src/turtlebot-hector-slam-jazzy/native/run.sh launch`.
+Real-robot notes, including the clock-sync requirement: `turtlebot_hector_slam/docs/REAL_ROBOT.md`.
+
 ## Run in Webots
 
 Webots (snap) runs on the host, the ROS 2 bridge, SLAM and Nav2 run in the `jazzy` container. Run from inside `~/ros2_jazzy_ws` (the directory the container mounts). Headless mode does not work with the snap (Qt xcb fails under xvfb), so use a real display.
@@ -47,4 +61,4 @@ Result of a full autonomous exploration run (`turtlebot_hector_slam/webots/resul
 
 - [x] Webots (SLAM + Nav2 + frontier exploration, scored against ground truth)
 - [~] Gazebo: the TB4 maze sim runs headless in the container (`turtlebot_hector_slam/gazebo/run_gz_headless.sh`) and the SLAM + Nav2 + explorer stack drives it, but without a GPU the lidar renders on the CPU at about 0.15x real time and falling, so mapping is impractical. A first run gave a partly corrupted map (`gazebo/maze_partial_map.png`). Not scored. With a GPU the sim is fast enough, but the dashboard-started Gazebo run still gave an empty Hector map (see Known issues in `docker/README.md`).
-- [ ] Real TurtleBot 4 (prepared: preflight check and cmd_vel relay in `tb4_hector_slam/scripts`, steps in `tb4_hector_slam/README.md`; not run on hardware)
+- [~] Real TurtleBot 4: first test 2026-10-23, teleop/undock/lidar worked, Nav2 goals and exploration did not (most likely the collision monitor stopping the robot; fix and clock check in `turtlebot_hector_slam/docs/REAL_ROBOT.md` 5.6, not yet re-tested)

@@ -320,7 +320,8 @@ void HectorMappingRos::scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr
     }
     catch (tf2::TransformException &ex)
     {
-      RCLCPP_INFO(this->get_logger(), "lookupTransform %s to %s timed out. Could not transform laser scan into base_frame: %s", 
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+                  "lookupTransform %s to %s timed out. Could not transform laser scan into base_frame: %s",
                   p_base_frame_.c_str(), scan->header.frame_id.c_str(), ex.what());
       return;
     }
@@ -427,32 +428,35 @@ void HectorMappingRos::scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr
   if (p_pub_map_odom_transform_)
   {
     geometry_msgs::msg::TransformStamped odom_to_base;
+    bool have_odom = true;
     try
     {
       odom_to_base = tf_buffer_->lookupTransform(p_odom_frame_, p_base_frame_, scan->header.stamp, rclcpp::Duration::from_seconds(0.5));
     }
     catch(tf2::TransformException &e)
     {
-      RCLCPP_ERROR(this->get_logger(), "Transform failed during publishing of map_odom transform: %s", e.what());
-      odom_to_base.transform.translation.x = 0.0;
-      odom_to_base.transform.translation.y = 0.0;
-      odom_to_base.transform.translation.z = 0.0;
-      odom_to_base.transform.rotation.x = 0.0;
-      odom_to_base.transform.rotation.y = 0.0;
-      odom_to_base.transform.rotation.z = 0.0;
-      odom_to_base.transform.rotation.w = 1.0;
+      // Substituting an identity odom->base here (as the port did) publishes
+      // map->odom = full SLAM pose, which puts the robot in the wrong place in
+      // the map until the next good scan. On a real robot over Wi-Fi this
+      // happens whenever odom TF arrives late, so skip this update instead.
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+        "No %s -> %s at scan time, map->odom not updated: %s", p_odom_frame_.c_str(), p_base_frame_.c_str(), e.what());
+      have_odom = false;
     }
-    
-    // Calculate map_to_odom = pose * odom_to_base^-1
-    tf2::Transform odom_to_base_tf, map_to_odom_tf;
-    tf2::fromMsg(odom_to_base.transform, odom_to_base_tf);
-    map_to_odom_tf = poseInfoContainer_.getTfTransform() * odom_to_base_tf.inverse();
-    
-    map_to_odom_.header.stamp = scan->header.stamp;
-    map_to_odom_.header.frame_id = p_map_frame_;
-    map_to_odom_.child_frame_id = p_odom_frame_;
-    map_to_odom_.transform = tf2::toMsg(map_to_odom_tf);
-    tfB_->sendTransform(map_to_odom_);
+
+    if (have_odom)
+    {
+      // Calculate map_to_odom = pose * odom_to_base^-1
+      tf2::Transform odom_to_base_tf, map_to_odom_tf;
+      tf2::fromMsg(odom_to_base.transform, odom_to_base_tf);
+      map_to_odom_tf = poseInfoContainer_.getTfTransform() * odom_to_base_tf.inverse();
+
+      map_to_odom_.header.stamp = scan->header.stamp;
+      map_to_odom_.header.frame_id = p_map_frame_;
+      map_to_odom_.child_frame_id = p_odom_frame_;
+      map_to_odom_.transform = tf2::toMsg(map_to_odom_tf);
+      tfB_->sendTransform(map_to_odom_);
+    }
   }
 
   // Publish the transform from map to estimated pose (if enabled)

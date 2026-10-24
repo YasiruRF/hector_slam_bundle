@@ -77,8 +77,10 @@ controller_server:
       linear_granularity: 0.05
       angular_granularity: 0.025
       # Hector publishes map->odom once per scan (~10 Hz), so it can lag the
-      # latest odom by ~0.3 s; 0.2 s made every control cycle fail.
-      transform_tolerance: 0.5
+      # latest odom by ~0.3 s; 0.2 s made every control cycle fail. On the real
+      # robot the RPLIDAR A1 is slower (~7 Hz) and both arrive over Wi-Fi, so
+      # allow 1 s.
+      transform_tolerance: 1.0
       xy_goal_tolerance: 0.25
       trans_stopped_velocity: 0.25
       short_circuit_trajectory_evaluation: True
@@ -261,9 +263,18 @@ collision_monitor:
     cmd_vel_in_topic: "cmd_vel_smoothed"
     cmd_vel_out_topic: "cmd_vel_unstamped"
     state_topic: "collision_monitor_state"
-    transform_tolerance: 0.2
+    # Jazzy's collision monitor zeroes every Nav2 command ("Robot to stop due
+    # to invalid source") when the scan is older than source_timeout by this
+    # computer's clock, or when it cannot transform it in time. Teleop does not
+    # pass through here, which is why driving by hand worked on the real robot
+    # while Nav2 goals did not. base_shift_correction looks up odom->base_link
+    # at *now*, which over Wi-Fi often isn't there within the tolerance, so it
+    # is off; the scan is used as-is (a few cm of lag at 0.15 m/s).
+    # A robot/laptop clock offset above ~1 s still stops it: sync the clocks
+    # (the dashboard's connection checks measure this).
+    transform_tolerance: 0.5
     source_timeout: 1.0
-    base_shift_correction: True
+    base_shift_correction: False
     stop_pub_timeout: 2.0
     polygons: ["FootprintApproach"]
     FootprintApproach:

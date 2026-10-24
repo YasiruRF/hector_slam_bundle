@@ -1,8 +1,10 @@
 # Running on a physical TurtleBot 4
 
-**Status: not yet tested on hardware.** Everything here is based on the
-simulation results and on how the stock TurtleBot 4 (ROS 2 Humble) is set up.
-Expect to adjust parameters; this guide says which ones and how.
+**Status: first hardware test (2026-10-23):** connection, teleop, undock/dock
+and the lidar worked; Nav2 goals and autonomous exploration did not. The most
+likely cause, and the fixes, are in section 5.6 (clock sync and the
+collision monitor). The robot runs ROS 2 **Jazzy** (TurtleBot 4 image for
+Jazzy, Create 3 firmware I.x).
 
 The same launch files are used as in simulation. The differences are:
 no Webots, no `use_sim_time`, and a network between the laptop and the robot.
@@ -30,29 +32,31 @@ and executes `/cmd_vel_unstamped`.
 
 ### Software on the laptop
 
-Same as the simulation setup (Ubuntu 22.04, ROS 2 Humble). You do **not** need
-Webots. You need:
+Ubuntu 24.04 with ROS 2 Jazzy installed in `/opt/ros/jazzy`. Run it natively,
+not in Docker (Nav2 kept dying in the container on the test laptop). From the
+repository root:
 
 ```bash
-sudo apt install ros-humble-navigation2 ros-humble-nav2-bringup \
-                 ros-humble-turtlebot4-description ros-humble-turtlebot4-msgs \
-                 ros-humble-irobot-create-msgs ros-humble-teleop-twist-keyboard
+native/setup.sh            # once: apt packages (sudo) + colcon build into ~/tb4_ws
+native/run.sh              # dashboard on http://localhost:8080
+native/run.sh preflight    # or: terminal checks
+native/run.sh launch       # or: SLAM + Nav2 from the terminal (explore:=true, use_rviz:=true)
 ```
 
-Then build Hector (with its two patches) and this package exactly as in the
-top-level README, steps 1 and 2. Without the patches Hector will either get no
-scans (QoS) or build a skewed map (laser transform).
+After `git pull`, rebuild with `SKIP_APT=1 native/setup.sh`. Terminal output
+goes to `~/tb4_data/logs/` and each node's log to `~/.ros/log/`; keep them
+from any failed run.
 
 ### Robot software
 
-Use the TurtleBot 4 image for Humble and update it:
+Use the TurtleBot 4 image for Jazzy and update it:
 
 ```bash
 # on the robot (ssh ubuntu@<robot-ip>)
 sudo apt update && sudo apt upgrade
 ```
 
-The Create 3 firmware must be a Humble-compatible release (H.x). Check it in
+The Create 3 firmware must be a Jazzy release (I.x). Check it in
 the Create 3 web page at `http://<robot-ip>:8080` (or the USB-C/Wi-Fi address
 shown in the TurtleBot 4 user manual).
 
@@ -66,9 +70,8 @@ Both machines must use the same `ROS_DOMAIN_ID` and the same RMW.
 # on BOTH the robot and the laptop, in every terminal
 export ROS_DOMAIN_ID=0                    # any number, but identical
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp   # or whatever the robot uses
-source /opt/ros/humble/setup.bash
-source ~/hector_ws/install/setup.bash
-source ~/tb4_slam_ws/install/setup.bash   # laptop only
+source /opt/ros/jazzy/setup.bash
+source ~/tb4_ws/install/setup.bash        # laptop only (native/run.sh does this)
 ```
 
 Find out what the robot uses and copy it:
@@ -242,7 +245,7 @@ Change **one thing at a time**, and re-run the same route to compare.
 | --- | --- | --- |
 | `/map` empty, Hector silent | QoS patch missing or `/scan` not arriving | `ros2 topic info /scan -v`: Hector subscriber must be `BEST_EFFORT`; check `ros2 topic hz /scan` on the laptop |
 | Map is skewed, robot slides sideways | Laser-transform patch missing | Rebuild Hector with the second patch (README step 1) |
-| `Transform data too old` / `extrapolation into the future` in Nav2 | Network latency, or clocks differ between robot and laptop | Sync clocks (below), then raise `transform_tolerance` in `nav2.yaml` (controller, both costmaps) from `0.5` to `0.8`–`1.0` |
+| `Transform data too old` / `extrapolation into the future` in Nav2 | Network latency, or clocks differ between robot and laptop | Sync clocks (below), then the controller's `transform_tolerance` is already 1.0; see 5.6 |
 | Robot stops often, `Failed to make progress` | Costmap too tight, or goal tolerance too small | Raise `inflation_radius` (`0.45` → `0.55`) or `xy_goal_tolerance` (`0.25` → `0.35`) |
 | Map smears on turns | Rotating too fast | Lower `max_vel_theta` in `nav2.yaml` (`1.0` → `0.6`); in teleop keep turns slow |
 | Map gets noisy / fills with speckles | Lidar noise, glass, shiny floors | In `hector_slam.yaml` lower `update_factor_occupied` (`0.9` → `0.8`), raise `laser_min_dist` (`0.15` → `0.2`) |
@@ -319,11 +322,26 @@ the area.
 base is about 0.34 m in diameter). Do not lower it. Raise it a little (`0.2`)
 if the robot clips furniture.
 
-### 5.6 Clock sync
+### 5.6 Clock sync and the collision monitor (why Nav2 did not drive)
 
-TF and scan timestamps are compared across machines. If the robot's clock and
-the laptop's clock differ by more than ~0.1 s you will see TF extrapolation
-errors.
+Scan and TF stamps come from the robot's clock; Nav2 on the laptop compares
+them with the laptop's clock. Jazzy's `collision_monitor` sits between Nav2
+and the robot, and it publishes **zero velocity** ("Robot to stop due to
+invalid source") whenever the latest scan looks older than `source_timeout`
+(1 s) by the laptop's clock, or it cannot transform the scan in time.
+Teleop does not go through it, so hand driving works while every Nav2 goal
+and the explorer go nowhere. That is what the first hardware test showed.
+
+What was changed in `config/nav2.yaml` for the Wi-Fi link:
+`collision_monitor` `base_shift_correction: False` (it no longer needs
+odom→base_link at *now*) and `transform_tolerance: 0.5`; DWB
+`transform_tolerance: 1.0`. A clock offset above ~1 s still stops the robot,
+so the clocks must agree. The dashboard checks this ("Clock sync", measured
+from `/scan` stamps; ~0.1–0.3 s is normal) and so does
+`native/run.sh preflight`. By hand: `ros2 topic delay /scan`.
+
+The Raspberry Pi has no battery-backed clock. If it has no internet it boots
+with a stale time. Fix it like this:
 
 ```bash
 # on both machines
@@ -333,6 +351,15 @@ sudo apt install chrony && sudo systemctl enable --now chrony
 
 For a robot with no internet, point both machines at the same NTP source
 (e.g. make the laptop an NTP server for the robot).
+
+Quick fix for a demo (lasts until the robot reboots or its NTP changes it),
+run on the laptop:
+
+```bash
+ssh -t ubuntu@<robot-ip> "sudo date -s @$(date +%s.%N)"
+```
+
+The Create 3 takes its time from the Pi, so give it a minute (or reboot the Create 3 from its web page).
 
 ---
 
