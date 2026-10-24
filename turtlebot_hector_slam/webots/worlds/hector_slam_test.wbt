@@ -178,4 +178,5 @@ Turtlebot4 {
   translation -4.0 3.0 0.01
   rotation 0 0 1 0.0
   controller "<extern>"
+  supervisor TRUE
 }

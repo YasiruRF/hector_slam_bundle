@@ -6,9 +6,12 @@ Run it with the system ROS 2 Python (see ../../run_sim.sh):
              /ground_truth/pose (start-relative, i.e. in Hector's map frame;
              z is the height above the start floor)
   subscribes /cmd_vel_unstamped
+             /kidnap (geometry_msgs/Pose2D, start-relative like /ground_truth/pose):
+             teleports the robot there (kidnapped-robot test). The wheels do not
+             turn, so odometry does not see the jump.
 With --patrol the robot ignores /cmd_vel_unstamped and drives the waypoint loop from
 the layout module (--layout, default tools/layout.py) so SLAM runs are
-repeatable.
+repeatable. --patrol-speed scales its linear and turn speeds (fast-turn tests).
 """
 import argparse
 import importlib
@@ -17,8 +20,8 @@ import os
 import sys
 
 import rclpy
-from controller import Robot
-from geometry_msgs.msg import PoseStamped, Twist, TransformStamped
+from controller import Supervisor
+from geometry_msgs.msg import Pose2D, PoseStamped, Twist, TransformStamped
 from nav_msgs.msg import Odometry
 from rclpy.qos import qos_profile_sensor_data
 from rosgraph_msgs.msg import Clock
@@ -45,11 +48,14 @@ def wrap(a):
 
 
 class Bridge:
-    def __init__(self, patrol, lidar_period_ms, reverse_scan, clock_offset=0.0):
-        self.robot = Robot()
+    def __init__(self, patrol, lidar_period_ms, reverse_scan, clock_offset=0.0,
+                 patrol_speed=1.0):
+        self.robot = Supervisor()  # supervisor only for /kidnap
         self.clock_offset = clock_offset  # added to sensor stamps, not to /clock
         self.dt = int(self.robot.getBasicTimeStep())
         self.patrol = patrol  # list of (x, y) waypoints, or None
+        self.patrol_speed = patrol_speed
+        self.kidnap_to = None
         self.reverse_scan = reverse_scan
 
         self.left = self.robot.getDevice('left_wheel_joint')
@@ -73,6 +79,7 @@ class Bridge:
         rclpy.init()
         self.node = rclpy.create_node('tb4_webots_bridge')
         self.node.create_subscription(Twist, 'cmd_vel_unstamped', self.on_cmd, 10)
+        self.node.create_subscription(Pose2D, 'kidnap', self.on_kidnap, 10)
         self.clock_pub = self.node.create_publisher(Clock, '/clock', 10)
         self.scan_pub = self.node.create_publisher(
             LaserScan, 'scan', qos_profile_sensor_data)
@@ -98,6 +105,22 @@ class Bridge:
     def on_cmd(self, msg):
         if not self.patrol:
             self.cmd = (msg.linear.x, msg.angular.z)
+
+    def on_kidnap(self, msg):
+        self.kidnap_to = (msg.x, msg.y, msg.theta)  # applied between steps in run()
+
+    def teleport(self, x, y, yaw):
+        """Move the robot to a start-relative pose (the /ground_truth/pose frame)."""
+        ox, oy, oz, oyaw = self.origin
+        c, s = math.cos(oyaw), math.sin(oyaw)
+        wx, wy, wyaw = ox + c * x - s * y, oy + s * x + c * y, oyaw + yaw
+        node = self.robot.getSelf()
+        z = node.getField('translation').getSFVec3f()[2]
+        node.getField('translation').setSFVec3f([wx, wy, z])
+        node.getField('rotation').setSFRotation([0, 0, 1, wyaw])
+        node.resetPhysics()
+        self.node.get_logger().info(
+            'Kidnapped to (%.2f, %.2f, %.0f deg), start frame' % (x, y, math.degrees(yaw)))
 
     def now(self, offset=0.0):
         t = max(0.0, self.robot.getTime() + offset)   # a negative offset would go below 0 at start
@@ -222,9 +245,11 @@ class Bridge:
                 self.node.get_logger().info('Patrol finished')
             return 0.0, 0.0
         err = wrap(math.atan2(dy, dx) - gyaw)
+        k = self.patrol_speed
         if abs(err) > 0.3:
-            return 0.0, max(-0.6, min(0.6, 1.5 * err))
-        return 0.25 * max(0.3, math.cos(err)), max(-0.5, min(0.5, 1.5 * err))
+            return 0.0, max(-0.6 * k, min(0.6 * k, 1.5 * k * err))
+        return (0.25 * k * max(0.3, math.cos(err)),
+                max(-0.5 * k, min(0.5 * k, 1.5 * k * err)))
 
     def slam_ready(self):
         """Hold the patrol until SLAM publishes /map (+3 s): odometry that
@@ -252,6 +277,9 @@ class Bridge:
             self.clock_pub.publish(clock)
 
             rx, ry, rz, ryaw, (gx, gy, gyaw) = self.ground_truth()
+            if self.kidnap_to is not None:
+                self.teleport(*self.kidnap_to)
+                self.kidnap_to = None
             if self.patrol and self.slam_ready():
                 self.cmd = self.patrol_cmd(gx, gy, gyaw)
             self.drive(*self.cmd)
@@ -292,6 +320,9 @@ if __name__ == '__main__':
     ap.add_argument('--clock-offset', type=float, default=0.0,
                     help='seconds added to scan/odom/TF/IMU stamps but not to /clock: '
                          'simulates a robot clock that is out of sync (testing)')
+    ap.add_argument('--patrol-speed', type=float, default=1.0,
+                    help='scale the patrol speeds (1.0: 0.25 m/s, turns up to 0.6 rad/s)')
     a = ap.parse_args()
     patrol = importlib.import_module(a.layout).PATROL if a.patrol else None
-    Bridge(patrol, a.lidar_period_ms, a.reverse_scan, a.clock_offset).run()
+    Bridge(patrol, a.lidar_period_ms, a.reverse_scan, a.clock_offset,
+           a.patrol_speed).run()

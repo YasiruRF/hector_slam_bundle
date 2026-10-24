@@ -52,6 +52,7 @@ def world():
   translation {x} {y} 0.01
   rotation 0 0 1 {yaw}
   controller "<extern>"
+  supervisor TRUE
 }}""")
     return "\n".join(out) + "\n"
 
