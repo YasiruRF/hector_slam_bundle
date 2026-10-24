@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Checks before running slam_nav_launch.py on a real TurtleBot 4 (Jazzy).
 #   ./preflight_real_robot.sh [namespace]      e.g. /tb4  (default: none)
+#   ./preflight_real_robot.sh --running [ns]   after slam_nav_launch.py is up:
+#       checks Hector is the only /map and map->odom source and the pose is stable
 # Run it in the same shell/container, with the same ROS_DOMAIN_ID and RMW as
 # the robot. Read-only: it only lists and echoes topics.
+RUNNING=0
+[ "${1:-}" = "--running" ] && { RUNNING=1; shift; }
 NS="${1:-}"
 ok()   { echo "  ok    $*"; }
 warn() { echo "  WARN  $*"; FAIL=1; }
@@ -39,6 +43,7 @@ U=$(ros2 topic info "$NS/cmd_vel_unstamped" 2>/dev/null | grep -i 'subscription 
 if [ "${U:-0}" -ge 1 ]; then ok "something takes Twist on cmd_vel_unstamped: use the launch as is"
 else warn "nothing takes cmd_vel_unstamped: run  ros2 run tb4_hector_slam cmd_vel_stamper.py --in cmd_vel_unstamped --out cmd_vel  alongside the launch"; fi
 
+if [ $RUNNING = 0 ]; then
 echo "map -> odom publishers (must be none before Hector starts)"
 if timeout 8 ros2 run tf2_ros tf2_echo map odom 2>/dev/null | grep -q Translation; then
   warn "something already publishes map frames (stock slam_toolbox / localization?)"
@@ -47,6 +52,21 @@ else ok "no map frame in TF"; fi
 echo "nodes that conflict"
 ros2 node list 2>/dev/null | grep -E "slam_toolbox|amcl|map_server|bt_navigator|controller_server" \
   && warn "stop the stock navigation/localization nodes above" || ok "none running"
+else
+echo "SLAM and Nav2 must not fight over /map or map -> odom (Hector owns both)"
+ros2 node list 2>/dev/null | grep -E "slam_toolbox|amcl|map_server" \
+  && warn "nodes above also publish /map or map->odom: stop them" || ok "no slam_toolbox/amcl/map_server"
+PUBS=$(ros2 topic info /map -v 2>/dev/null | awk '/^Publisher count/{s=1} /^Subscription count/{s=0} s && /Node name/{print $3}' | sort -u)
+N=$(grep -c . <<<"$PUBS")
+if [ -z "$PUBS" ]; then warn "nothing publishes /map: Hector is not producing a map (check its log and /scan)"
+elif [ "$N" -eq 1 ] && grep -q hector <<<"$PUBS"; then ok "/map publisher: $PUBS (only one)"
+else warn "/map publishers: $(tr '\n' ' ' <<<"$PUBS") (expected only hector_mapping)"; fi
+J=$(timeout 8 ros2 run tf2_ros tf2_echo map odom 2>/dev/null | awk '/Translation/{gsub(/[\[\],]/,""); x=$3; y=$4; n++; if (n>1) { d=sqrt((x-px)^2+(y-py)^2); if (d>m) m=d } px=x; py=y} END{ if (n==0) print "none"; else printf "%.3f %d", m, n }')
+if [ "$J" = none ] || [ -z "$J" ]; then warn "no map->odom transform in 8 s: Nav2 costmaps will wait forever"
+else read -r JUMP SAMPLES <<<"$J"
+  awk -v j="$JUMP" 'BEGIN{exit !(j<0.3)}' && ok "map->odom stable (${SAMPLES} samples, largest step ${JUMP} m)" \
+    || warn "map->odom jumped ${JUMP} m between samples: two publishers or a scan-match jump"; fi
+fi
 
 [ $FAIL = 0 ] && echo "PREFLIGHT OK" || echo "PREFLIGHT: fix the WARN items first"
 exit $FAIL
